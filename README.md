@@ -36,4 +36,3 @@ npm run dev
 ## **Contributing**  
 We welcome contributions! Open an issue, submit PRs, and help shape **decentralized financial inclusion**. 🚀  
 
-Let me know if you want modifications or additional sections! 🔥  
