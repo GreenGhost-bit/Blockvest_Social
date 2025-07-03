@@ -2,11 +2,11 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, Roboto } from "next/font/google"
 import "./globals.css"
-import { Navigation } from "@/components/navigation"
-import { WalletProvider } from "@/components/wallet-provider"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { Analytics } from "@/components/analytics"
+import { Navigation } from "@/frontend/components/navigation"
+import { WalletProvider } from "@/frontend/components/wallet-provider"
+import { ThemeProvider } from "@/frontend/components/theme-provider"
+import { Toaster } from "@/frontend/components/ui/toaster"
+import { Analytics } from "@/frontend/components/analytics"
 
 // Optimized font loading with display swap for better performance
 const inter = Inter({

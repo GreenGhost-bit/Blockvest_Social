@@ -14,7 +14,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
 import { PeraWalletConnect } from '@perawallet/connect'
 import algosdk from 'algosdk'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/frontend/hooks/use-toast'
 
 interface WalletState {
   isConnected: boolean

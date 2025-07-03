@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/frontend/components/ui/button"
+import { Badge } from "@/frontend/components/ui/badge"
 import { 
   Menu, 
   X, 
@@ -23,7 +23,7 @@ import {
 import { useWallet } from "./wallet-provider"
 import { ConnectWallet } from "./connect-wallet"
 import { motion, AnimatePresence } from "framer-motion"
-import { cn, truncateAddress } from "@/lib/utils"
+import { cn, truncateAddress } from "@/frontend/lib/utils"
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },

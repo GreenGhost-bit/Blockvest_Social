@@ -9,8 +9,8 @@ import {
   useRef,
   type ReactNode 
 } from "react"
-import { Toaster } from "@/components/ui/toaster"
-import { useToast } from "@/hooks/use-toast"
+import { Toaster } from "@/frontend/components/ui/toaster"
+import { useToast } from "@/frontend/hooks/use-toast"
 
 interface AlgorandAccount {
   address: string

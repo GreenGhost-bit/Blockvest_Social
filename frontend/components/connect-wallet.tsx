@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/frontend/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/frontend/components/ui/card"
+import { Badge } from "@/frontend/components/ui/badge"
 import { Wallet, ExternalLink, Shield, Zap, Globe } from "lucide-react"
 import { useWallet } from "./wallet-provider"
 import { motion, AnimatePresence } from "framer-motion"
-import { truncateAddress, formatCurrency } from "@/lib/utils"
+import { truncateAddress, formatCurrency } from "@/frontend/lib/utils"
 
 const walletFeatures = [
   {
