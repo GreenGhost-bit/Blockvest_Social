@@ -1,422 +1,249 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/frontend/components/ui/card"
-import { Badge } from "@/frontend/components/ui/badge"
-import { Button } from "@/frontend/components/ui/button"
-import { 
-  Search, 
-  Filter, 
-  MapPin, 
-  Clock, 
-  TrendingUp, 
-  Users, 
-  Star,
-  Globe,
-  DollarSign,
-  Target,
-  Calendar,
-  Award,
-  CheckCircle,
-  ArrowRight,
-  Heart,
-  Bookmark
-} from "lucide-react"
-import { formatCurrency } from "@/frontend/lib/utils"
+import React, { useState, useEffect } from 'react';
+import { useWallet } from '../../components/ui/wallet-provider';
+import api from '../../lib/api';
 
-const categories = [
-  "All",
-  "Agriculture", 
-  "Technology",
-  "Healthcare",
-  "Education",
-  "Clean Energy",
-  "Manufacturing",
-  "Retail",
-  "Services"
-]
+interface Investment {
+  id: string;
+  amount: number;
+  purpose: string;
+  description: string;
+  interestRate: number;
+  duration: number;
+  status: string;
+  createdAt: string;
+  borrower: {
+    name: string;
+    location: string;
+    reputationScore: number;
+  };
+}
 
-const sortOptions = [
-  { value: "newest", label: "Newest First" },
-  { value: "funding", label: "Funding Goal" },
-  { value: "progress", label: "Progress" },
-  { value: "rating", label: "Rating" },
-]
-
-const opportunities = [
-  {
-    id: 1,
-    title: "Solar Panel Manufacturing",
-    entrepreneur: "Ahmed Hassan",
-    location: "Cairo, Egypt",
-    category: "Clean Energy",
-    description: "Establishing a solar panel manufacturing facility to serve the growing renewable energy market in North Africa.",
-    fundingGoal: 25000,
-    currentFunding: 18750,
-    daysLeft: 23,
-    minInvestment: 100,
-    investors: 127,
-    rating: 4.8,
-    riskLevel: "Medium",
-    expectedROI: "18-25%",
-    timeline: "24 months",
-    verified: true,
-    featured: true,
-    image: "/placeholder.svg?height=200&width=400&query=solar panels",
-    highlights: [
-      "Government renewable energy incentives",
-      "Existing partnerships with local distributors",
-      "Experienced technical team"
-    ]
-  },
-  {
-    id: 2,
-    title: "Organic Spice Cooperative",
-    entrepreneur: "Priya Sharma",
-    location: "Kerala, India",
-    category: "Agriculture",
-    description: "Building a cooperative network of organic spice farmers to export premium spices to international markets.",
-    fundingGoal: 12000,
-    currentFunding: 8940,
-    daysLeft: 31,
-    minInvestment: 50,
-    investors: 89,
-    rating: 4.9,
-    riskLevel: "Low",
-    expectedROI: "15-22%",
-    timeline: "18 months",
-    verified: true,
-    featured: false,
-    image: "/placeholder.svg?height=200&width=400&query=spice farm",
-    highlights: [
-      "Organic certification in progress",
-      "Direct relationships with international buyers",
-      "Sustainable farming practices"
-    ]
-  },
-  {
-    id: 3,
-    title: "Mobile Health Clinic",
-    entrepreneur: "Dr. Maria Santos",
-    location: "São Paulo, Brazil",
-    category: "Healthcare",
-    description: "Mobile clinic providing healthcare services to underserved communities in metropolitan areas.",
-    fundingGoal: 35000,
-    currentFunding: 22750,
-    daysLeft: 19,
-    minInvestment: 200,
-    investors: 156,
-    rating: 4.7,
-    riskLevel: "Medium",
-    expectedROI: "12-18%",
-    timeline: "30 months",
-    verified: true,
-    featured: true,
-    image: "/placeholder.svg?height=200&width=400&query=mobile clinic",
-    highlights: [
-      "Government healthcare partnership",
-      "Medical team already assembled",
-      "Insurance coverage negotiations underway"
-    ]
-  },
-  {
-    id: 4,
-    title: "Digital Learning Platform",
-    entrepreneur: "James Okonkwo",
-    location: "Lagos, Nigeria",
-    category: "Education",
-    description: "E-learning platform focused on technical skills training for young professionals in emerging markets.",
-    fundingGoal: 18000,
-    currentFunding: 11340,
-    daysLeft: 27,
-    minInvestment: 75,
-    investors: 94,
-    rating: 4.6,
-    riskLevel: "High",
-    expectedROI: "25-35%",
-    timeline: "15 months",
-    verified: true,
-    featured: false,
-    image: "/placeholder.svg?height=200&width=400&query=online learning",
-    highlights: [
-      "Beta platform already live",
-      "Partnerships with local universities",
-      "Growing user base of 2,000+ students"
-    ]
-  },
-  {
-    id: 5,
-    title: "Sustainable Coffee Farm",
-    entrepreneur: "Carlos Rodriguez",
-    location: "Medellín, Colombia",
-    category: "Agriculture",
-    description: "Expanding sustainable coffee production with focus on fair trade and environmental conservation.",
-    fundingGoal: 22000,
-    currentFunding: 15840,
-    daysLeft: 35,
-    minInvestment: 100,
-    investors: 112,
-    rating: 4.8,
-    riskLevel: "Low",
-    expectedROI: "16-23%",
-    timeline: "20 months",
-    verified: true,
-    featured: true,
-    image: "/placeholder.svg?height=200&width=400&query=coffee farm",
-    highlights: [
-      "Fair trade certification",
-      "Direct relationships with international roasters",
-      "Award-winning coffee varieties"
-    ]
-  },
-  {
-    id: 6,
-    title: "Textile Manufacturing Hub",
-    entrepreneur: "Fatima Al-Zahra",
-    location: "Casablanca, Morocco",
-    category: "Manufacturing",
-    description: "Modern textile manufacturing facility producing sustainable fabrics for European fashion brands.",
-    fundingGoal: 45000,
-    currentFunding: 31500,
-    daysLeft: 14,
-    minInvestment: 250,
-    investors: 198,
-    rating: 4.9,
-    riskLevel: "Medium",
-    expectedROI: "20-28%",
-    timeline: "36 months",
-    verified: true,
-    featured: true,
-    image: "/placeholder.svg?height=200&width=400&query=textile factory",
-    highlights: [
-      "Contracts with major European brands",
-      "Eco-friendly production processes",
-      "Skilled workforce training program"
-    ]
-  }
-]
-
-export default function ExplorePage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [sortBy, setSortBy] = useState("newest")
-  const [filteredOpportunities, setFilteredOpportunities] = useState(opportunities)
-  const [savedOpportunities, setSavedOpportunities] = useState<number[]>([])
+const ExplorePage: React.FC = () => {
+  const { isConnected } = useWallet();
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
 
   useEffect(() => {
-    let filtered = opportunities.filter(opportunity => {
-      const matchesSearch = opportunity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          opportunity.entrepreneur.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          opportunity.location.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === "All" || opportunity.category === selectedCategory
-      return matchesSearch && matchesCategory
-    })
+    fetchInvestments();
+  }, [page]);
 
-    // Sort opportunities
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "funding":
-          return b.fundingGoal - a.fundingGoal
-        case "progress":
-          return (b.currentFunding / b.fundingGoal) - (a.currentFunding / a.fundingGoal)
-        case "rating":
-          return b.rating - a.rating
-        default:
-          return b.id - a.id // newest first
-      }
-    })
-
-    setFilteredOpportunities(filtered)
-  }, [searchQuery, selectedCategory, sortBy])
-
-  const toggleSaved = (id: number) => {
-    setSavedOpportunities(prev => 
-      prev.includes(id) 
-        ? prev.filter(opId => opId !== id)
-        : [...prev, id]
-    )
-  }
-
-  const getProgressPercentage = (current: number, goal: number) => {
-    return Math.min((current / goal) * 100, 100)
-  }
-
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case "Low": return "text-green-400 bg-green-400/20 border-green-400/30"
-      case "Medium": return "text-yellow-400 bg-yellow-400/20 border-yellow-400/30"
-      case "High": return "text-red-400 bg-red-400/20 border-red-400/30"
-      default: return "text-gray-400 bg-gray-400/20 border-gray-400/30"
+  const fetchInvestments = async () => {
+    try {
+      setLoading(true);
+      const response = await api.investments.explore({ page, limit: 10, status: 'pending' });
+      setInvestments(response.investments);
+      setTotalPages(response.pagination.pages);
+    } catch (err) {
+      setError('Failed to fetch investments');
+      console.error('Error fetching investments:', err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleFundInvestment = async (investment: Investment) => {
+    if (!isConnected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    setSelectedInvestment(investment);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const getReputationColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 bg-green-100';
+    if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading investment opportunities...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <p>{error}</p>
+          </div>
+          <button
+            onClick={fetchInvestments}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen pt-16">
-      {/* Header */}
-      <section className="py-12 px-4 bg-gradient-to-br from-blockchain-green/10 via-transparent to-golden-yellow/10">
-        <div className="container mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-8"
-          >
-            <h1 className="font-heading text-4xl md:text-5xl font-bold text-white mb-4">
-              Explore Investment <span className="text-blockchain-green">Opportunities</span>
-            </h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Discover verified entrepreneurs around the world seeking funding for their innovative business ventures
-            </p>
-          </motion.div>
-
-          {/* Search and Filters */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="max-w-4xl mx-auto space-y-6"
-          >
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search entrepreneurs, locations, or business types..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blockchain-green focus:border-transparent backdrop-blur-sm"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  className={
-                    selectedCategory === category
-                      ? "bg-blockchain-green hover:bg-blockchain-green/90 text-white"
-                      : "border-white/20 text-gray-300 hover:bg-white/10"
-                  }
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
-
-            {/* Sort Options */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Filter className="w-5 h-5 text-gray-400" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blockchain-green"
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value} className="bg-navy-dark">
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="text-sm text-gray-400">
-                {filteredOpportunities.length} opportunities found
-              </div>
-            </div>
-          </motion.div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Explore Investment Opportunities</h1>
+          <p className="text-lg text-gray-600">
+            Support entrepreneurs and individuals who need funding for their goals
+          </p>
         </div>
-      </section>
 
-      {/* Opportunities Grid */}
-      <section className="py-12 px-4">
-        <div className="container mx-auto">
-          <AnimatePresence>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredOpportunities.map((opportunity, index) => (
-                <motion.div
-                  key={opportunity.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  layout
-                >
-                  <Card className="bg-gradient-to-br from-white/5 to-white/10 border-white/20 overflow-hidden hover:scale-105 transition-all duration-300 group relative">
-                    {opportunity.featured && (
-                      <Badge className="absolute top-4 left-4 z-10 bg-golden-yellow text-navy-dark font-semibold">
-                        <Star className="w-3 h-3 mr-1 fill-current" />
-                        Featured
-                      </Badge>
-                    )}
-                    
-                    <button
-                      onClick={() => toggleSaved(opportunity.id)}
-                      className="absolute top-4 right-4 z-10 p-2 bg-black/20 backdrop-blur-sm rounded-full hover:bg-black/40 transition-colors"
-                    >
-                      <Bookmark 
-                        className={`w-4 h-4 ${savedOpportunities.includes(opportunity.id) ? 'text-golden-yellow fill-current' : 'text-white'}`} 
-                      />
-                    </button>
+        {!isConnected && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L3.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <p className="text-yellow-800">
+                Connect your wallet to invest in opportunities and support borrowers
+              </p>
+            </div>
+          </div>
+        )}
 
-                    {/* Image */}
-                    <div className="aspect-[4/3] bg-gray-700 relative overflow-hidden">
-                      <img
-                        src={opportunity.image}
-                        alt={opportunity.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      
-                      {/* Risk Level */}
-                      <Badge className={`absolute bottom-4 left-4 ${getRiskColor(opportunity.riskLevel)}`}>
-                        {opportunity.riskLevel} Risk
-                      </Badge>
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {investments.map((investment) => (
+            <div key={investment.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(investment.amount)}
+                  </span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReputationColor(investment.borrower.reputationScore)}`}>
+                    {investment.borrower.reputationScore}/100
+                  </span>
+                </div>
 
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <Badge variant="outline" className="text-blockchain-green border-blockchain-green/30">
-                          {opportunity.category}
-                        </Badge>
-                        {opportunity.verified && (
-                          <CheckCircle className="w-5 h-5 text-blockchain-green" />
-                        )}
-                      </div>
-                      
-                      <CardTitle className="text-lg font-bold text-white line-clamp-2">
-                        {opportunity.title}
-                      </CardTitle>
-                      
-                      <div className="flex items-center space-x-2 text-sm text-gray-400">
-                        <Users className="w-4 h-4" />
-                        <span>{opportunity.entrepreneur}</span>
-                        <span>•</span>
-                        <MapPin className="w-4 h-4" />
-                        <span>{opportunity.location}</span>
-                      </div>
-                    </CardHeader>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {investment.purpose}
+                </h3>
 
-                    <CardContent className="space-y-4">
-                      <CardDescription className="text-gray-300 line-clamp-3">
-                        {opportunity.description}
-                      </CardDescription>
+                <p className="text-gray-600 mb-4 line-clamp-2">
+                  {investment.description}
+                </p>
 
-                      {/* Progress Bar */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Progress</span>
-                          <span className="text-blockchain-green font-semibold">
-                            {Math.round(getProgressPercentage(opportunity.currentFunding, opportunity.fundingGoal))}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-blockchain-green to-emerald-400 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${getProgressPercentage(opportunity.currentFunding, opportunity.fundingGoal)}%` }}
-                          />
-                        </div
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Borrower</span>
+                    <span className="text-sm font-medium">{investment.borrower.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Location</span>
+                    <span className="text-sm font-medium">{investment.borrower.location}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Interest Rate</span>
+                    <span className="text-sm font-medium">{investment.interestRate}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Duration</span>
+                    <span className="text-sm font-medium">{investment.duration} months</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Posted</span>
+                    <span className="text-sm font-medium">{formatDate(investment.createdAt)}</span>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleFundInvestment(investment)}
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Fund Investment
+                  </button>
+                  <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {investments.length === 0 && (
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No investments available</h3>
+            <p className="text-gray-600">Check back later for new investment opportunities</p>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-8">
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className={`px-4 py-2 rounded-lg ${
+                  page === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+              >
+                Previous
+              </button>
+              
+              <div className="flex space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={`px-3 py-2 rounded-lg ${
+                      page === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+                className={`px-4 py-2 rounded-lg ${
+                  page === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ExplorePage;
