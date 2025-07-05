@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWallet } from './wallet-provider';
 import ConnectWallet from './connect-wallet';
+import NotificationsDropdown from './notifications-dropdown';
 
 const Navigation: React.FC = () => {
   const pathname = usePathname();
@@ -14,6 +15,7 @@ const Navigation: React.FC = () => {
   const navigationItems = [
     { name: 'Explore', href: '/explore', icon: '🔍' },
     { name: 'Investments', href: '/investments', icon: '💰' },
+    { name: 'Analytics', href: '/analytics', icon: '📊' },
     { name: 'Marketplace', href: '/marketplace', icon: '🏪' },
     { name: 'Reputation', href: '/reputation', icon: '⭐' },
     { name: 'Governance', href: '/governance', icon: '🏛️' },
@@ -57,6 +59,7 @@ const Navigation: React.FC = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isConnected ? (
               <>
+                <NotificationsDropdown />
                 <Link
                   href="/investments"
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
