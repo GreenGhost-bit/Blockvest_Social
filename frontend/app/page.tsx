@@ -1,468 +1,362 @@
-"use client"
+'use client';
 
-import { useState, useEffect, useRef } from "react"
-import { Button } from "@/frontend/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/frontend/components/ui/card"
-import { Badge } from "@/frontend/components/ui/badge"
-import { ArrowRight, TrendingUp, Users, DollarSign, Globe, Star, CheckCircle, Shield, Clock, Award } from "lucide-react"
-import Link from "next/link"
-import { motion, useInView, useSpring, useTransform } from "framer-motion"
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useWallet } from '../components/ui/wallet-provider';
+import api from '../lib/api';
 
-const stats = [
-  { label: "Total Investments", value: "$2.4M", icon: DollarSign, change: "+12%", description: "Deployed capital" },
-  { label: "Active Entrepreneurs", value: "1,247", icon: Users, change: "+8%", description: "Verified businesses" },
-  { label: "Success Rate", value: "94%", icon: TrendingUp, change: "+2%", description: "Profitable ventures" },
-  { label: "Global Reach", value: "45", icon: Globe, change: "+5%", description: "Countries served" },
-]
-
-const successStories = [
-  {
-    id: 1,
-    name: "Maria Santos",
-    business: "Sustainable Coffee Farm",
-    location: "Colombia",
-    funded: "$15,000",
-    roi: "127%",
-    image: "/placeholder.svg?height=200&width=300&query=coffee farm",
-    trustScore: 95,
-    description: "Transformed local coffee production with eco-friendly practices, creating 20+ jobs",
-    timeline: "18 months",
-    category: "Agriculture",
-  },
-  {
-    id: 2,
-    name: "Ahmed Hassan",
-    business: "Solar Panel Installation",
-    location: "Egypt",
-    funded: "$8,500",
-    roi: "89%",
-    image: "/placeholder.svg?height=200&width=300&query=solar panels",
-    trustScore: 92,
-    description: "Bringing renewable energy to rural communities, powering 500+ homes",
-    timeline: "12 months",
-    category: "Clean Energy",
-  },
-  {
-    id: 3,
-    name: "Priya Sharma",
-    business: "Textile Cooperative",
-    location: "India",
-    funded: "$12,000",
-    roi: "156%",
-    image: "/placeholder.svg?height=200&width=300&query=textile workshop",
-    trustScore: 98,
-    description: "Empowering women through traditional craft modernization, supporting 50+ artisans",
-    timeline: "24 months",
-    category: "Social Impact",
-  },
-]
-
-const features = [
-  {
-    icon: Shield,
-    title: "Blockchain Security",
-    description: "Smart contracts ensure transparent and secure investments"
-  },
-  {
-    icon: Clock,
-    title: "Quick Setup",
-    description: "Start investing in under 5 minutes with our streamlined process"
-  },
-  {
-    icon: Award,
-    title: "Verified Entrepreneurs",
-    description: "All entrepreneurs undergo rigorous vetting and background checks"
-  }
-]
-
-// Counter animation hook
-function useCounter(end: number, duration: number = 2000) {
-  const [count, setCount] = useState(0)
-  const countRef = useRef(null)
-  const inView = useInView(countRef)
-  
-  useEffect(() => {
-    if (!inView) return
-    
-    let startTime: number
-    let animationFrame: number
-    
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp
-      const progress = (timestamp - startTime) / duration
-      
-      if (progress < 1) {
-        setCount(Math.floor(end * progress))
-        animationFrame = requestAnimationFrame(animate)
-      } else {
-        setCount(end)
-      }
-    }
-    
-    animationFrame = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(animationFrame)
-  }, [end, duration, inView])
-  
-  return { count, ref: countRef }
+interface DashboardData {
+  user: {
+    name: string;
+    reputationScore: number;
+    totalInvested: number;
+    totalBorrowed: number;
+    isVerified: boolean;
+  };
+  stats: {
+    totalInvestments: number;
+    activeInvestments: number;
+    completedInvestments: number;
+    pendingInvestments: number;
+  };
+  recentInvestments: Array<{
+    id: string;
+    amount: number;
+    purpose: string;
+    status: string;
+    createdAt: string;
+    role: string;
+  }>;
 }
 
-export default function HomePage() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const heroRef = useRef(null)
-  const isHeroInView = useInView(heroRef)
+const HomePage: React.FC = () => {
+  const { isConnected, user } = useWallet();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Mouse tracking for hero parallax effect
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 100,
-        y: (e.clientY / window.innerHeight) * 100,
-      })
+    if (isConnected) {
+      fetchDashboardData();
     }
+  }, [isConnected]);
 
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.users.getDashboard();
+      setDashboardData(response.dashboard);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+              Welcome to{' '}
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Blockvest Social
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              A decentralized social investment platform built on Algorand blockchain. 
+              Connect investors with individuals who need funding, creating opportunities 
+              for everyone to participate in the economy.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/explore"
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Explore Investments
+              </Link>
+              <Link
+                href="/about"
+                className="bg-white text-gray-900 px-8 py-3 rounded-lg text-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Learn More
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Secure & Transparent</h3>
+              <p className="text-gray-600">
+                All transactions are secured by Algorand blockchain technology with full transparency
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Social Impact</h3>
+              <p className="text-gray-600">
+                Support individuals without formal credit history and make a positive social impact
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Fast & Efficient</h3>
+              <p className="text-gray-600">
+                Quick transactions with low fees powered by Algorand's efficient consensus mechanism
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-20 bg-white rounded-xl shadow-lg p-8">
+            <h2 className="text-3xl font-bold text-gray-900 text-center mb-8">How It Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  1
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Connect Wallet</h3>
+                <p className="text-gray-600">
+                  Connect your Algorand wallet to start participating in the platform
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  2
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Explore or Create</h3>
+                <p className="text-gray-600">
+                  Browse investment opportunities or create your own funding request
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  3
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Invest & Earn</h3>
+                <p className="text-gray-600">
+                  Fund investments and track returns while building your reputation
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-navy-dark overflow-hidden">
-      {/* Hero Section */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center py-20 px-4">
-        {/* Animated Background */}
-        <div className="absolute inset-0">
-          <div 
-            className="absolute inset-0 bg-gradient-to-br from-blockchain-green/20 via-transparent to-golden-yellow/20 transition-all duration-700 ease-out"
-            style={{
-              transform: `translate(${mousePosition.x * 0.02}px, ${mousePosition.y * 0.02}px)`
-            }}
-          />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.1)_0%,transparent_50%)]" />
-          
-          {/* Floating particles */}
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-blockchain-green/30 rounded-full"
-              initial={{ 
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-                opacity: 0
-              }}
-              animate={{ 
-                y: -100,
-                opacity: [0, 1, 0],
-              }}
-              transition={{ 
-                duration: Math.random() * 10 + 10,
-                repeat: Infinity,
-                delay: Math.random() * 5,
-                ease: "linear"
-              }}
-              style={{ left: `${Math.random() * 100}%` }}
-            />
-          ))}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {user?.profile?.name || 'User'}!
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Here's your investment dashboard overview
+          </p>
         </div>
 
-        <div className="container mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="text-center max-w-5xl mx-auto"
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="mb-6"
-            >
-              <Badge className="bg-blockchain-green/20 text-blockchain-green border-blockchain-green/30 text-sm px-4 py-2 mb-6">
-                🚀 Blockchain-Powered Investing Platform
-              </Badge>
-            </motion.div>
-
-            <motion.h1 
-              className="font-heading text-5xl md:text-7xl lg:text-8xl font-bold mb-8 leading-tight"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.3 }}
-            >
-              <span className="bg-gradient-to-r from-blockchain-green via-emerald-400 to-golden-yellow bg-clip-text text-transparent animate-pulse">
-                Invest in Tomorrow's
-              </span>
-              <br />
-              <span className="text-white">Entrepreneurs</span>
-            </motion.h1>
-
-            <motion.p 
-              className="text-xl md:text-2xl lg:text-3xl text-gray-300 mb-12 leading-relaxed max-w-4xl mx-auto"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.5 }}
-            >
-              Empower global entrepreneurs through blockchain-powered micro-investments. 
-              <span className="text-blockchain-green font-semibold"> Build wealth</span> while creating
-              <span className="text-golden-yellow font-semibold"> positive impact</span> across emerging markets.
-            </motion.p>
-
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.7 }}
-            >
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-golden-yellow to-yellow-400 hover:from-yellow-400 hover:to-golden-yellow text-navy-dark font-bold text-lg px-10 py-6 rounded-xl shadow-2xl hover:shadow-golden-yellow/25 transition-all duration-300 transform hover:scale-105"
-                asChild
-              >
-                <Link href="/explore">
-                  Start Investing <ArrowRight className="ml-3 w-6 h-6" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-blockchain-green text-blockchain-green hover:bg-blockchain-green hover:text-navy-dark font-bold text-lg px-10 py-6 rounded-xl backdrop-blur-sm bg-blockchain-green/5 hover:shadow-lg transition-all duration-300"
-              >
-                Become an Entrepreneur
-              </Button>
-            </motion.div>
-
-            {/* Feature highlights */}
-            <motion.div 
-              className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.9 }}
-            >
-              {features.map((feature, index) => {
-                const Icon = feature.icon
-                return (
-                  <div key={index} className="text-center p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300">
-                    <Icon className="w-8 h-8 text-blockchain-green mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                    <p className="text-sm text-gray-300">{feature.description}</p>
-                  </div>
-                )
-              })}
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div 
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-white/50 rounded-full mt-2" />
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
           </div>
-        </motion.div>
-      </section>
+        ) : dashboardData ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Total Invested</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {formatCurrency(dashboardData.user.totalInvested)}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-      {/* Enhanced Stats Section */}
-      <section className="py-20 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blockchain-green/5 to-transparent" />
-        <div className="container mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="font-heading text-4xl md:text-5xl font-bold text-white mb-6">
-              Platform <span className="text-blockchain-green">Performance</span>
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Real-time metrics showcasing our community's collective impact
-            </p>
-          </motion.div>
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Active Investments</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {dashboardData.stats.activeInvestments}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon
-              const numericValue = parseFloat(stat.value.replace(/[^0-9.]/g, ''))
-              const { count, ref } = useCounter(numericValue, 2000)
-              const suffix = stat.value.replace(/[0-9.]/g, '')
-              
-              return (
-                <motion.div
-                  key={stat.label}
-                  ref={ref}
-                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                >
-                  <Card className="bg-gradient-to-br from-white to-gray-50 text-navy-dark hover:shadow-2xl transition-all duration-300 border-0 overflow-hidden relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blockchain-green/5 to-golden-yellow/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <CardContent className="p-8 relative z-10">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="p-3 bg-blockchain-green/10 rounded-xl">
-                          <Icon className="w-8 h-8 text-blockchain-green" />
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Reputation Score</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {dashboardData.user.reputationScore}/100
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Verification Status</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {dashboardData.user.isVerified ? 'Verified' : 'Pending'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Investments</h3>
+              {dashboardData.recentInvestments.length === 0 ? (
+                <p className="text-gray-600 text-center py-8">
+                  No recent investments. Start by exploring opportunities or creating your own.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {dashboardData.recentInvestments.map((investment) => (
+                    <div key={investment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className={`w-3 h-3 rounded-full ${
+                          investment.status === 'active' ? 'bg-green-500' :
+                          investment.status === 'pending' ? 'bg-yellow-500' :
+                          investment.status === 'completed' ? 'bg-blue-500' : 'bg-red-500'
+                        }`}></div>
+                        <div>
+                          <p className="font-medium text-gray-900">{investment.purpose}</p>
+                          <p className="text-sm text-gray-600">
+                            {investment.role === 'borrower' ? 'Borrowing' : 'Investing'} • {formatCurrency(investment.amount)}
+                          </p>
                         </div>
-                        <Badge className="bg-blockchain-green/20 text-blockchain-green font-semibold px-3 py-1">
-                          {stat.change}
-                        </Badge>
                       </div>
-                      <div className="text-4xl md:text-5xl font-bold font-heading mb-2 text-navy-dark">
-                        {count === numericValue ? stat.value : `${count}${suffix}`}
+                      <div className="text-right">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          investment.status === 'active' ? 'bg-green-100 text-green-800' :
+                          investment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          investment.status === 'completed' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {investment.status}
+                        </span>
                       </div>
-                      <div className="text-gray-600 font-semibold mb-1">{stat.label}</div>
-                      <div className="text-sm text-gray-500">{stat.description}</div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-      {/* Enhanced Success Stories */}
-      <section className="py-20 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-golden-yellow/5 to-transparent" />
-        <div className="container mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="font-heading text-4xl md:text-5xl font-bold text-white mb-6">
-              Success <span className="text-golden-yellow">Stories</span>
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Real entrepreneurs, real impact. Discover how micro-investments are transforming lives and communities worldwide.
-            </p>
-          </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="space-y-3">
+                  <Link
+                    href="/investments"
+                    className="block w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center"
+                  >
+                    Create Investment
+                  </Link>
+                  <Link
+                    href="/explore"
+                    className="block w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors text-center"
+                  >
+                    Explore Opportunities
+                  </Link>
+                  <Link
+                    href="/reputation"
+                    className="block w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors text-center"
+                  >
+                    View Reputation
+                  </Link>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {successStories.map((story, index) => (
-              <motion.div
-                key={story.id}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -10, scale: 1.02 }}
-                className="group"
-              >
-                <Card className="bg-gradient-to-br from-white to-gray-50 text-navy-dark overflow-hidden hover:shadow-2xl transition-all duration-500 border-0 h-full">
-                  <div className="aspect-[4/3] bg-gray-200 relative overflow-hidden">
-                    <img
-                      src={story.image || "/placeholder.svg"}
-                      alt={story.business}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                    <Badge className="absolute top-4 right-4 bg-blockchain-green text-white font-semibold shadow-lg">
-                      <Star className="w-3 h-3 mr-1 fill-current" />
-                      {story.trustScore}
-                    </Badge>
-                    <Badge className="absolute top-4 left-4 bg-golden-yellow text-navy-dark font-semibold">
-                      {story.category}
-                    </Badge>
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Investment Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Investments</span>
+                    <span className="font-medium">{dashboardData.stats.totalInvestments}</span>
                   </div>
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-xl font-bold">{story.name}</CardTitle>
-                      <Badge variant="outline" className="text-blockchain-green border-blockchain-green">
-                        <Globe className="w-3 h-3 mr-1" />
-                        {story.location}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-navy-dark/80 font-semibold text-base">
-                      {story.business}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">{story.description}</p>
-                    
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-1">Funded</div>
-                        <div className="font-bold text-blockchain-green">{story.funded}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-1">ROI</div>
-                        <div className="font-bold text-golden-yellow">{story.roi}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-1">Timeline</div>
-                        <div className="font-bold text-navy-dark">{story.timeline}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-center pt-4 border-t border-gray-200">
-                      <CheckCircle className="w-5 h-5 text-blockchain-green mr-2" />
-                      <span className="text-sm font-semibold text-blockchain-green">Verified Success</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Enhanced CTA Section */}
-      <section className="py-20 px-4 relative">
-        <div className="container mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <Card className="bg-gradient-to-r from-blockchain-green via-emerald-500 to-golden-yellow text-navy-dark relative overflow-hidden border-0">
-              <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
-              <CardContent className="p-16 text-center relative z-10">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  viewport={{ once: true }}
-                >
-                  <h2 className="font-heading text-4xl md:text-5xl font-bold mb-6">
-                    Ready to Make an Impact?
-                  </h2>
-                  <p className="text-xl md:text-2xl mb-10 opacity-90 max-w-3xl mx-auto leading-relaxed">
-                    Join thousands of investors creating positive change through micro-investments. 
-                    Start your journey today and be part of the future of finance.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                    <Button
-                      size="lg"
-                      className="bg-navy-dark hover:bg-navy-dark/90 text-white font-bold text-lg px-10 py-6 rounded-xl shadow-2xl hover:shadow-navy-dark/25 transition-all duration-300 transform hover:scale-105"
-                      asChild
-                    >
-                      <Link href="/explore">
-                        Explore Opportunities <ArrowRight className="ml-3 w-6 h-6" />
-                      </Link>
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="border-2 border-navy-dark text-navy-dark hover:bg-navy-dark hover:text-white font-bold text-lg px-10 py-6 rounded-xl transition-all duration-300"
-                      asChild
-                    >
-                      <Link href="/learn-more">
-                        Learn More
-                      </Link>
-                    </Button>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Completed</span>
+                    <span className="font-medium">{dashboardData.stats.completedInvestments}</span>
                   </div>
-                </motion.div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </section>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pending</span>
+                    <span className="font-medium">{dashboardData.stats.pendingInvestments}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Success Rate</span>
+                    <span className="font-medium">
+                      {dashboardData.stats.totalInvestments > 0 
+                        ? Math.round((dashboardData.stats.completedInvestments / dashboardData.stats.totalInvestments) * 100)
+                        : 0}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Unable to load dashboard data.</p>
+          </div>
+        )}
+      </div>
     </div>
-  )
-}
+  );
+};
+
+export default HomePage;
