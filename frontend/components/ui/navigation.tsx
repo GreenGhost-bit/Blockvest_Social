@@ -16,6 +16,7 @@ const Navigation: React.FC = () => {
     { name: 'Explore', href: '/explore', icon: '🔍' },
     { name: 'Investments', href: '/investments', icon: '💰' },
     { name: 'Analytics', href: '/analytics', icon: '📊' },
+    { name: 'Verification', href: '/verification', icon: '🛡️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🏪' },
     { name: 'Reputation', href: '/reputation', icon: '⭐' },
     { name: 'Governance', href: '/governance', icon: '🏛️' },
