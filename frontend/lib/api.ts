@@ -121,6 +121,42 @@ class ApiClient {
 
     getStats: () => this.get('/documents/stats'),
   };
+
+  mfa = {
+    getStatus: () => this.get('/mfa/status'),
+
+    setupTOTP: () => this.post('/mfa/setup/totp'),
+
+    verifyTOTP: (data: { token: string; isSetupVerification?: boolean }) =>
+      this.post('/mfa/verify/totp', data),
+
+    setupAlgorand: () => this.post('/mfa/setup/algorand'),
+
+    verifyAlgorand: (data: { challenge: string; signature: string; isSetupVerification?: boolean }) =>
+      this.post('/mfa/verify/algorand', data),
+
+    setupEmail: () => this.post('/mfa/setup/email'),
+
+    verifyEmail: (data: { code: string; isSetupVerification?: boolean }) =>
+      this.post('/mfa/verify/email', data),
+
+    verifyBackupCode: (data: { code: string }) =>
+      this.post('/mfa/verify/backup-code', data),
+
+    trustDevice: (data: { deviceName: string }) =>
+      this.post('/mfa/trust-device', data),
+
+    updateSettings: (data: { settings: any }) =>
+      this.put('/mfa/settings', data),
+
+    disableMethod: (method: string) =>
+      this.delete(`/mfa/disable/${method}`),
+
+    getTrustedDevices: () => this.get('/mfa/trusted-devices'),
+
+    removeTrustedDevice: (deviceId: string) =>
+      this.delete(`/mfa/trusted-devices/${deviceId}`),
+  };
 }
 
 export const api = new ApiClient();
