@@ -29,7 +29,10 @@
     "morgan": "^1.10.0",
     "joi": "^17.9.2",
     "express-validator": "^7.0.1",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.2",
+    "speakeasy": "^2.0.0",
+    "qrcode": "^1.5.3",
+    "nodemailer": "^6.9.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
