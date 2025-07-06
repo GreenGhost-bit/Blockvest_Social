@@ -5,12 +5,15 @@ const dotenv = require('dotenv');
 const algosdk = require('algosdk');
 const http = require('http');
 const socketIo = require('socket.io');
+const fs = require('fs');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const investmentRoutes = require('./routes/investments');
 const userRoutes = require('./routes/users');
 const analyticsRoutes = require('./routes/analytics');
 const notificationRoutes = require('./routes/notifications');
+const documentRoutes = require('./routes/documents');
 
 dotenv.config();
 
@@ -24,6 +27,17 @@ const io = socketIo(server, {
 });
 
 global.io = io;
+
+const uploadsDir = path.join(__dirname, 'uploads');
+const documentsDir = path.join(uploadsDir, 'documents');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+if (!fs.existsSync(documentsDir)) {
+  fs.mkdirSync(documentsDir, { recursive: true });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -53,6 +67,7 @@ app.use('/api/investments', investmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/documents', documentRoutes);
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
