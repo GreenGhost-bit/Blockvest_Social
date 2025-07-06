@@ -99,6 +99,28 @@ class ApiClient {
     
     getById: (id: string) => this.get(`/investments/${id}`),
   };
+
+  documents = {
+    getMyDocuments: (params: { status?: string; type?: string } = {}) => {
+      const queryString = new URLSearchParams(params as any).toString();
+      return this.get(`/documents/my-documents?${queryString}`);
+    },
+
+    getVerificationQueue: (params: { status?: string; page?: number; limit?: number } = {}) => {
+      const queryString = new URLSearchParams(params as any).toString();
+      return this.get(`/documents/verification-queue?${queryString}`);
+    },
+
+    verify: (id: string, data: { algorandTxId?: string }) =>
+      this.put(`/documents/${id}/verify`, data),
+
+    reject: (id: string, data: { reason: string }) =>
+      this.put(`/documents/${id}/reject`, data),
+
+    delete: (id: string) => this.delete(`/documents/${id}`),
+
+    getStats: () => this.get('/documents/stats'),
+  };
 }
 
 export const api = new ApiClient();
