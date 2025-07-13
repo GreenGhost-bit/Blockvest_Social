@@ -157,6 +157,26 @@ class ApiClient {
     removeTrustedDevice: (deviceId: string) =>
       this.delete(`/mfa/trusted-devices/${deviceId}`),
   };
+
+  riskAssessment = {
+    assessInvestment: (investmentId: string) =>
+      this.post(`/risk-assessment/assess/${investmentId}`),
+
+    getAssessment: (investmentId: string) =>
+      this.get(`/risk-assessment/investment/${investmentId}`),
+
+    getBorrowerAssessments: (borrowerId: string) =>
+      this.get(`/risk-assessment/borrower/${borrowerId}`),
+
+    overrideAssessment: (assessmentId: string, data: { factor: string; newScore: number; reason: string }) =>
+      this.put(`/risk-assessment/override/${assessmentId}`, data),
+
+    getAnalytics: (timeframe: number = 30) =>
+      this.get(`/risk-assessment/analytics/platform?timeframe=${timeframe}`),
+
+    reassessInvestment: (assessmentId: string) =>
+      this.post(`/risk-assessment/reassess/${assessmentId}`),
+  };
 }
 
 export const api = new ApiClient();
