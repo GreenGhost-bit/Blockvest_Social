@@ -15,6 +15,7 @@ const analyticsRoutes = require('./routes/analytics');
 const notificationRoutes = require('./routes/notifications');
 const documentRoutes = require('./routes/documents');
 const mfaRoutes = require('./routes/mfa');
+const riskAssessmentRoutes = require('./routes/riskAssessment');
 
 dotenv.config();
 
@@ -70,6 +71,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/mfa', mfaRoutes);
+app.use('/api/risk-assessment', riskAssessmentRoutes);
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
