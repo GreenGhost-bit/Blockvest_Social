@@ -3,10 +3,11 @@ const algosdk = require('algosdk');
 const Investment = require('../models/Investment');
 const User = require('../models/User');
 const { authenticateToken } = require('./auth');
+const { autoAssessInvestment, validateRiskThreshold } = require('../middleware/riskAssessmentMiddleware');
 
 const router = express.Router();
 
-router.post('/create', authenticateToken, async (req, res) => {
+router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInvestment, async (req, res) => {
   try {
     const { amount, purpose, description, interestRate, duration } = req.body;
     
