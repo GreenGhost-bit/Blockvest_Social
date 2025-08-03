@@ -1,264 +1,269 @@
 const jwt = require('jsonwebtoken');
-const { AuthenticationError, AuthorizationError, logger } = require('./errorHandler');
 const User = require('../models/User');
 
-// Verify JWT token
-const verifyToken = (req, res, next) => {
+// Enhanced authentication middleware
+const authenticateToken = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
     if (!token) {
-      throw new AuthenticationError('Access token required');
+      return res.status(401).json({ 
+        error: 'Access token required',
+        code: 'TOKEN_MISSING'
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    
+    // Check if user still exists and is active
+    const user = await User.findById(decoded.userId).select('-password');
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    // Check if account is locked
+    if (user.isLocked()) {
+      return res.status(423).json({ 
+        error: 'Account is temporarily locked due to multiple failed login attempts',
+        code: 'ACCOUNT_LOCKED',
+        retryAfter: user.account_locked_until
+      });
+    }
+
+    // Check if user is verified (for sensitive operations)
+    if (req.requireVerification && !user.verified) {
+      return res.status(403).json({ 
+        error: 'Account verification required for this operation',
+        code: 'VERIFICATION_REQUIRED'
+      });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      throw new AuthenticationError('Token expired');
-    }
-    if (error.name === 'JsonWebTokenError') {
-      throw new AuthenticationError('Invalid token');
-    }
-    throw new AuthenticationError('Authentication failed');
-  }
-};
-
-// Optional token verification (doesn't throw error if no token)
-const optionalAuth = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = decoded;
-    }
-    next();
-  } catch (error) {
-    // Continue without authentication
-    next();
-  }
-};
-
-// Check if user has required role
-const requireRole = (roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      throw new AuthenticationError('Authentication required');
-    }
-
-    const userRole = req.user.role || 'user';
-    const requiredRoles = Array.isArray(roles) ? roles : [roles];
-
-    if (!requiredRoles.includes(userRole)) {
-      throw new AuthorizationError('Insufficient permissions');
-    }
-
-    next();
-  };
-};
-
-// Check if user owns the resource or has admin role
-const requireOwnership = (resourceField = 'userId') => {
-  return (req, res, next) => {
-    if (!req.user) {
-      throw new AuthenticationError('Authentication required');
-    }
-
-    const resourceUserId = req.params[resourceField] || req.body[resourceField];
-    const isOwner = req.user.id === resourceUserId;
-    const isAdmin = req.user.role === 'admin';
-
-    if (!isOwner && !isAdmin) {
-      throw new AuthorizationError('Access denied');
-    }
-
-    next();
-  };
-};
-
-// Rate limiting for authentication endpoints
-const authRateLimit = require('express-rate-limit')({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
-  message: {
-    success: false,
-    message: 'Too many authentication attempts, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Generate JWT token
-const generateToken = (user) => {
-  const payload = {
-    id: user._id,
-    email: user.email,
-    username: user.username,
-    role: user.role,
-    walletAddress: user.wallet_address,
-    verified: user.verified,
-    riskScore: user.risk_score
-  };
-
-  return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
-  });
-};
-
-// Refresh token
-const refreshToken = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      throw new AuthenticationError('Refresh token required');
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
-    
-    // Check if user still exists
-    User.findById(decoded.id)
-      .then(user => {
-        if (!user) {
-          throw new AuthenticationError('User not found');
-        }
-
-        // Generate new token
-        const newToken = generateToken(user);
-        
-        res.json({
-          success: true,
-          token: newToken,
-          user: {
-            id: user._id,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-            walletAddress: user.wallet_address,
-            verified: user.verified,
-            riskScore: user.risk_score
-          }
-        });
-      })
-      .catch(error => {
-        logger.error('Token refresh failed', { error: error.message });
-        throw new AuthenticationError('Token refresh failed');
+      return res.status(401).json({ 
+        error: 'Token expired',
+        code: 'TOKEN_EXPIRED'
       });
-  } catch (error) {
-    next(error);
+    }
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        error: 'Invalid token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    console.error('Authentication error:', error);
+    return res.status(500).json({ 
+      error: 'Authentication failed',
+      code: 'AUTH_ERROR'
+    });
   }
 };
 
-// Validate wallet address ownership
-const validateWalletOwnership = async (req, res, next) => {
-  try {
-    const { walletAddress } = req.body;
+// Role-based authorization middleware
+const authorizeRole = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED'
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        code: 'INSUFFICIENT_PERMISSIONS',
+        requiredRoles: roles,
+        userRole: req.user.role
+      });
+    }
+
+    next();
+  };
+};
+
+// Resource ownership middleware
+const authorizeOwnership = (resourceModel, resourceIdField = 'id') => {
+  return async (req, res, next) => {
+    try {
+      const resourceId = req.params[resourceIdField] || req.body[resourceIdField];
+      
+      if (!resourceId) {
+        return res.status(400).json({ 
+          error: 'Resource ID required',
+          code: 'RESOURCE_ID_MISSING'
+        });
+      }
+
+      const resource = await resourceModel.findById(resourceId);
+      if (!resource) {
+        return res.status(404).json({ 
+          error: 'Resource not found',
+          code: 'RESOURCE_NOT_FOUND'
+        });
+      }
+
+      // Check if user owns the resource or is admin
+      const isOwner = resource.user && resource.user.toString() === req.user._id.toString();
+      const isAdmin = req.user.role === 'admin';
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ 
+          error: 'Access denied - resource ownership required',
+          code: 'OWNERSHIP_REQUIRED'
+        });
+      }
+
+      req.resource = resource;
+      next();
+    } catch (error) {
+      console.error('Ownership authorization error:', error);
+      return res.status(500).json({ 
+        error: 'Authorization failed',
+        code: 'AUTH_ERROR'
+      });
+    }
+  };
+};
+
+// Rate limiting middleware for specific actions
+const rateLimitAction = (action, maxAttempts = 5, windowMs = 15 * 60 * 1000) => {
+  const attempts = new Map();
+  
+  return (req, res, next) => {
+    const key = `${req.user._id}-${action}`;
+    const now = Date.now();
+    const userAttempts = attempts.get(key) || { count: 0, resetTime: now + windowMs };
     
-    if (!walletAddress) {
+    if (now > userAttempts.resetTime) {
+      userAttempts.count = 0;
+      userAttempts.resetTime = now + windowMs;
+    }
+    
+    if (userAttempts.count >= maxAttempts) {
+      return res.status(429).json({ 
+        error: `Too many ${action} attempts. Please try again later.`,
+        code: 'RATE_LIMIT_EXCEEDED',
+        retryAfter: Math.ceil((userAttempts.resetTime - now) / 1000)
+      });
+    }
+    
+    userAttempts.count++;
+    attempts.set(key, userAttempts);
+    
+    next();
+  };
+};
+
+// Verification required middleware
+const requireVerification = (req, res, next) => {
+  req.requireVerification = true;
+  next();
+};
+
+// Enhanced session validation
+const validateSession = async (req, res, next) => {
+  try {
+    if (!req.user) {
       return next();
     }
 
-    // Check if wallet address is already associated with another user
-    const existingUser = await User.findOne({ 
-      wallet_address: walletAddress,
-      _id: { $ne: req.user?.id }
-    });
-
-    if (existingUser) {
-      throw new AuthenticationError('Wallet address already associated with another account');
+    // Check if user's session is still valid
+    const lastActive = new Date(req.user.last_active);
+    const sessionTimeout = 24 * 60 * 60 * 1000; // 24 hours
+    
+    if (Date.now() - lastActive.getTime() > sessionTimeout) {
+      return res.status(401).json({ 
+        error: 'Session expired',
+        code: 'SESSION_EXPIRED'
+      });
     }
+
+    // Update last active timestamp
+    req.user.last_active = new Date();
+    await req.user.save();
 
     next();
   } catch (error) {
-    next(error);
+    console.error('Session validation error:', error);
+    next();
   }
 };
 
-// Log authentication events
-const logAuthEvent = (event, userId, details = {}) => {
-  logger.info('Authentication event', {
-    event,
-    userId,
-    timestamp: new Date().toISOString(),
-    ...details
-  });
+// IP-based security middleware
+const validateIP = (allowedIPs = []) => {
+  return (req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress;
+    
+    if (allowedIPs.length > 0 && !allowedIPs.includes(clientIP)) {
+      return res.status(403).json({ 
+        error: 'Access denied from this IP address',
+        code: 'IP_NOT_ALLOWED'
+      });
+    }
+
+    next();
+  };
 };
 
-// Session management
-const sessionMiddleware = (req, res, next) => {
-  // Add session tracking
-  req.sessionId = req.headers['x-session-id'] || req.user?.id || 'anonymous';
-  
-  // Log session activity
-  logger.info('Session activity', {
-    sessionId: req.sessionId,
-    userId: req.user?.id || 'anonymous',
-    method: req.method,
-    url: req.url,
-    userAgent: req.get('User-Agent'),
-    ip: req.ip
-  });
+// Enhanced error handling for auth failures
+const handleAuthError = (error, req, res, next) => {
+  if (error.name === 'UnauthorizedError') {
+    return res.status(401).json({ 
+      error: 'Invalid or expired token',
+      code: 'AUTH_FAILED'
+    });
+  }
 
-  next();
+  if (error.name === 'ForbiddenError') {
+    return res.status(403).json({ 
+      error: 'Access denied',
+      code: 'ACCESS_DENIED'
+    });
+  }
+
+  next(error);
 };
 
-// Check if user is verified
-const requireVerification = (req, res, next) => {
-  if (!req.user) {
-    throw new AuthenticationError('Authentication required');
-  }
+// Audit logging middleware
+const auditLog = (action) => {
+  return (req, res, next) => {
+    const auditData = {
+      action,
+      userId: req.user?._id,
+      userEmail: req.user?.email,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      timestamp: new Date(),
+      method: req.method,
+      path: req.path,
+      params: req.params,
+      body: req.body
+    };
 
-  if (!req.user.verified) {
-    throw new AuthorizationError('Account verification required');
-  }
-
-  next();
-};
-
-// Check if user has completed risk assessment
-const requireRiskAssessment = (req, res, next) => {
-  if (!req.user) {
-    throw new AuthenticationError('Authentication required');
-  }
-
-  if (req.user.riskScore === undefined || req.user.riskScore === null) {
-    throw new AuthorizationError('Risk assessment required');
-  }
-
-  next();
-};
-
-// MFA verification middleware
-const requireMFA = (req, res, next) => {
-  if (!req.user) {
-    throw new AuthenticationError('Authentication required');
-  }
-
-  const mfaToken = req.headers['x-mfa-token'];
-  
-  if (!mfaToken) {
-    throw new AuthenticationError('MFA token required');
-  }
-
-  // Verify MFA token (implementation depends on your MFA setup)
-  // This is a placeholder - implement actual MFA verification
-  next();
+    // Log audit data (you can implement your own logging mechanism)
+    console.log('AUDIT:', JSON.stringify(auditData, null, 2));
+    
+    next();
+  };
 };
 
 module.exports = {
-  verifyToken,
-  optionalAuth,
-  requireRole,
-  requireOwnership,
-  authRateLimit,
-  generateToken,
-  refreshToken,
-  validateWalletOwnership,
-  logAuthEvent,
-  sessionMiddleware,
+  authenticateToken,
+  authorizeRole,
+  authorizeOwnership,
+  rateLimitAction,
   requireVerification,
-  requireRiskAssessment,
-  requireMFA
+  validateSession,
+  validateIP,
+  handleAuthError,
+  auditLog
 }; 
