@@ -35,7 +35,8 @@
     "socket.io": "^4.7.2",
     "speakeasy": "^2.0.0",
     "qrcode": "^1.5.3",
-    "nodemailer": "^6.9.4"
+    "nodemailer": "^6.9.4",
+    "compression": "^1.7.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
