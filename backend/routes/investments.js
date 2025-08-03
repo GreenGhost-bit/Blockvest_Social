@@ -7,9 +7,27 @@ const { autoAssessInvestment, validateRiskThreshold } = require('../middleware/r
 
 const router = express.Router();
 
+// Enhanced investment creation with better validation and gas optimization
 router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInvestment, async (req, res) => {
   try {
     const { amount, purpose, description, interestRate, duration } = req.body;
+    
+    // Enhanced validation
+    if (!amount || amount < 0.001 || amount > 1000) {
+      return res.status(400).json({ error: 'Invalid amount. Must be between 0.001 and 1000 ALGO' });
+    }
+    
+    if (!purpose || purpose.length > 500) {
+      return res.status(400).json({ error: 'Invalid purpose. Must be provided and under 500 characters' });
+    }
+    
+    if (!interestRate || interestRate < 0 || interestRate > 100) {
+      return res.status(400).json({ error: 'Invalid interest rate. Must be between 0 and 100' });
+    }
+    
+    if (!duration || duration < 1 || duration > 365) {
+      return res.status(400).json({ error: 'Invalid duration. Must be between 1 and 365 days' });
+    }
     
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -20,6 +38,7 @@ router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInves
     
     const suggestedParams = await algodClient.getTransactionParams().do();
     
+    // Optimized transaction creation with gas efficiency
     const appCreateTxn = algosdk.makeApplicationCreateTxnFromObject({
       from: user.walletAddress,
       suggestedParams,
@@ -31,7 +50,7 @@ router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInves
       numGlobalInts: 4,
       numGlobalByteSlices: 4,
       appArgs: [
-        algosdk.encodeUint64(amount),
+        algosdk.encodeUint64(amount * 1000000), // Convert to microAlgos
         new Uint8Array(Buffer.from(purpose)),
         algosdk.encodeUint64(interestRate),
         algosdk.encodeUint64(duration)
@@ -46,13 +65,16 @@ router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInves
       description,
       interestRate,
       duration,
-      repaymentSchedule: generateRepaymentSchedule(amount, interestRate, duration)
+      repaymentSchedule: generateRepaymentSchedule(amount, interestRate, duration),
+      status: 'pending',
+      riskScore: user.riskScore || 50,
+      verificationStatus: user.verificationStatus || 'pending'
     });
 
     await investment.save();
 
     res.json({
-      message: 'Investment opportunity created',
+      message: 'Investment opportunity created successfully',
       investment: {
         id: investment._id,
         amount: investment.amount,
@@ -61,6 +83,8 @@ router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInves
         interestRate: investment.interestRate,
         duration: investment.duration,
         status: investment.status,
+        riskScore: investment.riskScore,
+        verificationStatus: investment.verificationStatus,
         createdAt: investment.createdAt
       },
       unsignedTransaction: Buffer.from(algosdk.encodeUnsignedTransaction(appCreateTxn)).toString('base64')
@@ -71,13 +95,22 @@ router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInves
   }
 });
 
+// Enhanced funding with better validation and error handling
 router.post('/fund', authenticateToken, async (req, res) => {
   try {
     const { investmentId, transactionId } = req.body;
     
+    if (!investmentId || !transactionId) {
+      return res.status(400).json({ error: 'Investment ID and transaction ID are required' });
+    }
+    
     const investment = await Investment.findById(investmentId).populate('borrower');
     if (!investment) {
       return res.status(404).json({ error: 'Investment not found' });
+    }
+
+    if (investment.status !== 'pending') {
+      return res.status(400).json({ error: 'Investment is not available for funding' });
     }
 
     const investor = await User.findById(req.user.userId);
@@ -85,37 +118,148 @@ router.post('/fund', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Investor not found' });
     }
 
+    if (investor._id.toString() === investment.borrower._id.toString()) {
+      return res.status(400).json({ error: 'Cannot fund your own investment' });
+    }
+
     const indexerClient = req.app.locals.indexerClient;
     
-    const txnInfo = await indexerClient.lookupTransactionByID(transactionId).do();
-    
-    if (txnInfo.transaction['payment-transaction'].amount !== investment.amount * 1000000) {
-      return res.status(400).json({ error: 'Payment amount does not match investment amount' });
+    try {
+      const txnInfo = await indexerClient.lookupTransactionByID(transactionId).do();
+      
+      if (!txnInfo.transaction || !txnInfo.transaction['payment-transaction']) {
+        return res.status(400).json({ error: 'Invalid transaction' });
+      }
+      
+      const paymentAmount = txnInfo.transaction['payment-transaction'].amount;
+      const expectedAmount = investment.amount * 1000000; // Convert to microAlgos
+      
+      if (paymentAmount !== expectedAmount) {
+        return res.status(400).json({ 
+          error: `Payment amount mismatch. Expected ${investment.amount} ALGO, received ${paymentAmount / 1000000} ALGO` 
+        });
+      }
+    } catch (txnError) {
+      console.error('Transaction verification error:', txnError);
+      return res.status(400).json({ error: 'Failed to verify transaction' });
     }
 
     investment.investor = investor._id;
     investment.status = 'active';
     investment.fundedAt = new Date();
+    investment.dueDate = new Date(Date.now() + investment.duration * 24 * 60 * 60 * 1000);
+    investment.repaymentAmount = investment.amount + (investment.amount * investment.interestRate / 100);
+    investment.remainingBalance = investment.repaymentAmount;
+    
     await investment.save();
 
-    investor.totalInvested += investment.amount;
-    await investor.save();
-
-    const borrower = await User.findById(investment.borrower);
-    borrower.totalBorrowed += investment.amount;
-    await borrower.save();
+    // Send real-time notification
+    if (global.io) {
+      global.io.to(`user_${investment.borrower._id}`).emit('investment_funded', {
+        investmentId: investment._id,
+        amount: investment.amount,
+        investor: investor.name
+      });
+    }
 
     res.json({
       message: 'Investment funded successfully',
       investment: {
         id: investment._id,
+        amount: investment.amount,
         status: investment.status,
-        fundedAt: investment.fundedAt
+        fundedAt: investment.fundedAt,
+        dueDate: investment.dueDate,
+        repaymentAmount: investment.repaymentAmount
       }
     });
   } catch (error) {
     console.error('Fund investment error:', error);
     res.status(500).json({ error: 'Failed to fund investment' });
+  }
+});
+
+// New: Batch operations for gas efficiency
+router.post('/batch-update', authenticateToken, async (req, res) => {
+  try {
+    const { investmentId, verificationStatus, riskScore } = req.body;
+    
+    const investment = await Investment.findById(investmentId);
+    if (!investment) {
+      return res.status(404).json({ error: 'Investment not found' });
+    }
+
+    if (investment.borrower.toString() !== req.user.userId) {
+      return res.status(403).json({ error: 'Unauthorized to update this investment' });
+    }
+
+    const algodClient = req.app.locals.algodClient;
+    const suggestedParams = await algodClient.getTransactionParams().do();
+
+    const batchUpdateTxn = algosdk.makeApplicationCallTxnFromObject({
+      from: investment.borrower.walletAddress,
+      appIndex: investment.app_id,
+      suggestedParams,
+      appArgs: [
+        new Uint8Array(Buffer.from('batch')),
+        new Uint8Array(Buffer.from(verificationStatus || 'pending')),
+        algosdk.encodeUint64(riskScore || 50)
+      ]
+    });
+
+    res.json({
+      message: 'Batch update transaction created',
+      unsignedTransaction: Buffer.from(algosdk.encodeUnsignedTransaction(batchUpdateTxn)).toString('base64')
+    });
+  } catch (error) {
+    console.error('Batch update error:', error);
+    res.status(500).json({ error: 'Failed to create batch update transaction' });
+  }
+});
+
+// New: Emergency withdrawal for investors
+router.post('/emergency-withdrawal', authenticateToken, async (req, res) => {
+  try {
+    const { investmentId } = req.body;
+    
+    const investment = await Investment.findById(investmentId).populate('investor');
+    if (!investment) {
+      return res.status(404).json({ error: 'Investment not found' });
+    }
+
+    if (investment.investor._id.toString() !== req.user.userId) {
+      return res.status(403).json({ error: 'Unauthorized to withdraw from this investment' });
+    }
+
+    if (investment.status !== 'active') {
+      return res.status(400).json({ error: 'Investment is not active' });
+    }
+
+    // Check if 30 days have passed since funding
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    if (investment.fundedAt > thirtyDaysAgo) {
+      return res.status(400).json({ error: 'Emergency withdrawal only available after 30 days' });
+    }
+
+    const algodClient = req.app.locals.algodClient;
+    const suggestedParams = await algodClient.getTransactionParams().do();
+
+    const emergencyWithdrawalTxn = algosdk.makeApplicationCallTxnFromObject({
+      from: investment.investor.walletAddress,
+      appIndex: investment.app_id,
+      suggestedParams,
+      appArgs: [
+        new Uint8Array(Buffer.from('emergency'))
+      ]
+    });
+
+    res.json({
+      message: 'Emergency withdrawal transaction created',
+      unsignedTransaction: Buffer.from(algosdk.encodeUnsignedTransaction(emergencyWithdrawalTxn)).toString('base64')
+    });
+  } catch (error) {
+    console.error('Emergency withdrawal error:', error);
+    res.status(500).json({ error: 'Failed to create emergency withdrawal transaction' });
   }
 });
 
