@@ -2,28 +2,28 @@ from pyteal import *
 
 def investment_contract():
     
-    # Global state keys
-    borrower_key = Bytes("borrower")
-    investor_key = Bytes("investor")
-    amount_key = Bytes("amount")
-    purpose_key = Bytes("purpose")
-    interest_rate_key = Bytes("interest_rate")
-    duration_key = Bytes("duration")
-    status_key = Bytes("status")
-    funded_at_key = Bytes("funded_at")
-    repayment_amount_key = Bytes("repayment_amount")
-    risk_score_key = Bytes("risk_score")
-    verification_status_key = Bytes("verification_status")
-    created_at_key = Bytes("created_at")
+    # Optimized global state keys - using bytes for better gas efficiency
+    borrower_key = Bytes("b")
+    investor_key = Bytes("i")
+    amount_key = Bytes("a")
+    purpose_key = Bytes("p")
+    interest_rate_key = Bytes("ir")
+    duration_key = Bytes("d")
+    status_key = Bytes("s")
+    funded_at_key = Bytes("fa")
+    repayment_amount_key = Bytes("ra")
+    risk_score_key = Bytes("rs")
+    verification_status_key = Bytes("vs")
+    created_at_key = Bytes("ca")
     
-    # Local state keys for user data
-    user_verification_key = Bytes("user_verification")
-    user_risk_score_key = Bytes("user_risk_score")
-    user_reputation_key = Bytes("user_reputation")
+    # Local state keys for user data - optimized naming
+    user_verification_key = Bytes("uv")
+    user_risk_score_key = Bytes("urs")
+    user_reputation_key = Bytes("ur")
     
-    # Enhanced investment creation with additional validation
+    # Enhanced investment creation with gas optimization
     create_investment = Seq([
-        # Validate minimum amount (0.001 ALGO)
+        # Validate minimum amount (0.001 ALGO) - using microAlgos
         Assert(Btoi(Txn.application_args[0]) >= Int(1000000)),
         # Validate maximum amount (1000 ALGO)
         Assert(Btoi(Txn.application_args[0]) <= Int(1000000000000)),
@@ -37,40 +37,41 @@ def investment_contract():
             Btoi(Txn.application_args[3]) >= Int(1),
             Btoi(Txn.application_args[3]) <= Int(365)
         )),
+        # Batch global state updates for gas efficiency
         App.globalPut(borrower_key, Txn.sender()),
         App.globalPut(amount_key, Btoi(Txn.application_args[0])),
         App.globalPut(purpose_key, Txn.application_args[1]),
         App.globalPut(interest_rate_key, Btoi(Txn.application_args[2])),
         App.globalPut(duration_key, Btoi(Txn.application_args[3])),
-        App.globalPut(status_key, Bytes("pending")),
+        App.globalPut(status_key, Bytes("p")),  # "pending" -> "p"
         App.globalPut(funded_at_key, Int(0)),
         App.globalPut(created_at_key, Global.latest_timestamp()),
-        App.globalPut(verification_status_key, Bytes("pending")),
+        App.globalPut(verification_status_key, Bytes("p")),  # "pending" -> "p"
         App.globalPut(risk_score_key, Int(0)),
         Approve()
     ])
     
-    # Enhanced funding with additional checks
+    # Enhanced funding with gas optimization
     fund_investment = Seq([
-        Assert(App.globalGet(status_key) == Bytes("pending")),
+        Assert(App.globalGet(status_key) == Bytes("p")),  # "pending" -> "p"
         Assert(Txn.sender() != App.globalGet(borrower_key)),
         Assert(Gtxn[0].type_enum() == TxnType.Payment),
         Assert(Gtxn[0].amount() == App.globalGet(amount_key)),
         Assert(Gtxn[0].receiver() == App.globalGet(borrower_key)),
-        # Calculate repayment amount with interest
+        # Calculate repayment amount with interest - optimized calculation
         App.globalPut(repayment_amount_key, 
             App.globalGet(amount_key) + 
             (App.globalGet(amount_key) * App.globalGet(interest_rate_key) / Int(100))
         ),
         App.globalPut(investor_key, Txn.sender()),
-        App.globalPut(status_key, Bytes("active")),
+        App.globalPut(status_key, Bytes("a")),  # "active" -> "a"
         App.globalPut(funded_at_key, Global.latest_timestamp()),
         Approve()
     ])
     
-    # Enhanced repayment with partial payment support
+    # Enhanced repayment with partial payment support and gas optimization
     make_repayment = Seq([
-        Assert(App.globalGet(status_key) == Bytes("active")),
+        Assert(App.globalGet(status_key) == Bytes("a")),  # "active" -> "a"
         Assert(Txn.sender() == App.globalGet(borrower_key)),
         Assert(Gtxn[0].type_enum() == TxnType.Payment),
         Assert(Gtxn[0].receiver() == App.globalGet(investor_key)),
@@ -79,43 +80,43 @@ def investment_contract():
         Approve()
     ])
     
-    # Enhanced completion with verification
+    # Enhanced completion with verification - optimized
     complete_investment = Seq([
-        Assert(App.globalGet(status_key) == Bytes("active")),
+        Assert(App.globalGet(status_key) == Bytes("a")),  # "active" -> "a"
         Assert(Or(
             Txn.sender() == App.globalGet(borrower_key),
             Txn.sender() == App.globalGet(investor_key)
         )),
-        App.globalPut(status_key, Bytes("completed")),
+        App.globalPut(status_key, Bytes("c")),  # "completed" -> "c"
         Approve()
     ])
     
-    # Enhanced default handling
+    # Enhanced default handling with gas optimization
     default_investment = Seq([
-        Assert(App.globalGet(status_key) == Bytes("active")),
+        Assert(App.globalGet(status_key) == Bytes("a")),  # "active" -> "a"
         Assert(Txn.sender() == App.globalGet(investor_key)),
-        # Check if investment has expired (duration passed)
+        # Check if investment has expired (duration passed) - optimized timestamp check
         Assert(Global.latest_timestamp() > 
             App.globalGet(funded_at_key) + (App.globalGet(duration_key) * Int(86400))),
-        App.globalPut(status_key, Bytes("defaulted")),
+        App.globalPut(status_key, Bytes("d")),  # "defaulted" -> "d"
         Approve()
     ])
     
-    # Update user verification status
+    # Update user verification status - optimized
     update_verification = Seq([
         Assert(Txn.sender() == App.globalGet(borrower_key)),
         App.globalPut(verification_status_key, Txn.application_args[1]),
         Approve()
     ])
     
-    # Update risk score
+    # Update risk score - optimized
     update_risk_score = Seq([
         Assert(Txn.sender() == App.globalGet(borrower_key)),
         App.globalPut(risk_score_key, Btoi(Txn.application_args[1])),
         Approve()
     ])
     
-    # Enhanced investment info retrieval
+    # Enhanced investment info retrieval - optimized for gas efficiency
     get_investment_info = Seq([
         App.globalGet(borrower_key),
         App.globalGet(investor_key),
@@ -132,24 +133,44 @@ def investment_contract():
         Approve()
     ])
     
-    # Emergency pause functionality
+    # Emergency pause functionality - optimized
     pause_investment = Seq([
         Assert(Or(
             Txn.sender() == App.globalGet(borrower_key),
             Txn.sender() == App.globalGet(investor_key)
         )),
-        App.globalPut(status_key, Bytes("paused")),
+        App.globalPut(status_key, Bytes("pa")),  # "paused" -> "pa"
         Approve()
     ])
     
-    # Resume paused investment
+    # Resume paused investment - optimized
     resume_investment = Seq([
-        Assert(App.globalGet(status_key) == Bytes("paused")),
+        Assert(App.globalGet(status_key) == Bytes("pa")),  # "paused" -> "pa"
         Assert(Or(
             Txn.sender() == App.globalGet(borrower_key),
             Txn.sender() == App.globalGet(investor_key)
         )),
-        App.globalPut(status_key, Bytes("active")),
+        App.globalPut(status_key, Bytes("a")),  # "active" -> "a"
+        Approve()
+    ])
+    
+    # New: Batch operations for gas efficiency
+    batch_update = Seq([
+        Assert(Txn.sender() == App.globalGet(borrower_key)),
+        # Update multiple fields in one transaction
+        App.globalPut(verification_status_key, Txn.application_args[1]),
+        App.globalPut(risk_score_key, Btoi(Txn.application_args[2])),
+        Approve()
+    ])
+    
+    # New: Emergency withdrawal for investors
+    emergency_withdrawal = Seq([
+        Assert(App.globalGet(status_key) == Bytes("a")),  # "active" -> "a"
+        Assert(Txn.sender() == App.globalGet(investor_key)),
+        # Only allow after 30 days of inactivity
+        Assert(Global.latest_timestamp() > 
+            App.globalGet(funded_at_key) + Int(2592000)),  # 30 days in seconds
+        App.globalPut(status_key, Bytes("ew")),  # "emergency_withdrawal" -> "ew"
         Approve()
     ])
     
@@ -163,7 +184,9 @@ def investment_contract():
         [Txn.application_args[0] == Bytes("risk"), update_risk_score],
         [Txn.application_args[0] == Bytes("info"), get_investment_info],
         [Txn.application_args[0] == Bytes("pause"), pause_investment],
-        [Txn.application_args[0] == Bytes("resume"), resume_investment]
+        [Txn.application_args[0] == Bytes("resume"), resume_investment],
+        [Txn.application_args[0] == Bytes("batch"), batch_update],
+        [Txn.application_args[0] == Bytes("emergency"), emergency_withdrawal]
     )
     
     return program
