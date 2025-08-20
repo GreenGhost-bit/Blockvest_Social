@@ -1,221 +1,198 @@
-const { logger } = require('../middleware/errorHandler');
+const User = require('../models/User');
 
 class RiskAssessmentService {
   constructor() {
     this.riskFactors = {
-      income: { weight: 0.25, maxScore: 100 },
-      creditHistory: { weight: 0.20, maxScore: 100 },
-      employment: { weight: 0.15, maxScore: 100 },
-      debtToIncome: { weight: 0.20, maxScore: 100 },
-      purpose: { weight: 0.10, maxScore: 100 },
-      verification: { weight: 0.10, maxScore: 100 }
+      income: { weight: 0.25, maxScore: 25 },
+      employment: { weight: 0.20, maxScore: 20 },
+      creditHistory: { weight: 0.15, maxScore: 15 },
+      debtToIncome: { weight: 0.15, maxScore: 15 },
+      collateral: { weight: 0.10, maxScore: 10 },
+      purpose: { weight: 0.10, maxScore: 10 },
+      socialScore: { weight: 0.05, maxScore: 5 }
     };
   }
 
-  // Calculate risk score based on multiple factors
-  calculateRiskScore(assessmentData) {
+  // Calculate comprehensive risk score
+  async calculateRiskScore(userId, assessmentData) {
     try {
-      const scores = {};
-      let totalScore = 0;
-      let totalWeight = 0;
-
-      // Income level scoring
-      scores.income = this.calculateIncomeScore(assessmentData.monthly_income, assessmentData.income_level);
-      
-      // Credit history scoring
-      scores.creditHistory = this.calculateCreditHistoryScore(assessmentData.credit_history);
-      
-      // Employment status scoring
-      scores.employment = this.calculateEmploymentScore(assessmentData.employment_status, assessmentData.employment_duration);
-      
-      // Debt-to-income ratio scoring
-      scores.debtToIncome = this.calculateDebtToIncomeScore(assessmentData.monthly_income, assessmentData.existing_debts);
-      
-      // Purpose scoring
-      scores.purpose = this.calculatePurposeScore(assessmentData.purpose, assessmentData.amount);
-      
-      // Verification scoring
-      scores.verification = this.calculateVerificationScore(assessmentData.verification_status);
-
-      // Calculate weighted score
-      for (const [factor, score] of Object.entries(scores)) {
-        const weight = this.riskFactors[factor]?.weight || 0;
-        totalScore += score * weight;
-        totalWeight += weight;
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('User not found');
       }
 
-      const finalScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
-      
-      logger.info('Risk score calculated', {
-        userId: assessmentData.userId,
-        finalScore,
-        factorScores: scores
-      });
+      let totalScore = 0;
+      const factorScores = {};
+
+      // Income assessment
+      factorScores.income = this.assessIncome(assessmentData.income, assessmentData.incomeStability);
+      totalScore += factorScores.income;
+
+      // Employment assessment
+      factorScores.employment = this.assessEmployment(assessmentData.employmentStatus, assessmentData.employmentDuration);
+      totalScore += factorScores.employment;
+
+      // Credit history assessment
+      factorScores.creditHistory = this.assessCreditHistory(assessmentData.creditHistory, assessmentData.paymentHistory);
+      totalScore += factorScores.creditHistory;
+
+      // Debt-to-income ratio assessment
+      factorScores.debtToIncome = this.assessDebtToIncome(assessmentData.monthlyIncome, assessmentData.monthlyDebts);
+      totalScore += factorScores.debtToIncome;
+
+      // Collateral assessment
+      factorScores.collateral = this.assessCollateral(assessmentData.collateralValue, assessmentData.loanAmount);
+      totalScore += factorScores.collateral;
+
+      // Purpose assessment
+      factorScores.purpose = this.assessPurpose(assessmentData.loanPurpose, assessmentData.businessPlan);
+      totalScore += factorScores.purpose;
+
+      // Social score assessment
+      factorScores.socialScore = this.assessSocialScore(user.reputation_score, user.connections.length);
+      totalScore += factorScores.socialScore;
+
+      // Normalize score to 0-100 range
+      const normalizedScore = Math.min(100, Math.max(0, totalScore));
 
       return {
-        riskScore: finalScore,
-        riskLevel: this.getRiskLevel(finalScore),
-        factorScores: scores,
-        recommendations: this.generateRecommendations(scores, finalScore)
+        riskScore: normalizedScore,
+        riskLevel: this.getRiskLevel(normalizedScore),
+        factorScores,
+        recommendations: this.generateRecommendations(factorScores, normalizedScore),
+        maxLoanAmount: this.calculateMaxLoanAmount(normalizedScore, assessmentData.monthlyIncome),
+        suggestedInterestRate: this.calculateSuggestedInterestRate(normalizedScore)
       };
     } catch (error) {
-      logger.error('Failed to calculate risk score', { error: error.message });
-      throw new Error('Risk assessment calculation failed');
+      console.error('Error calculating risk score:', error);
+      throw error;
     }
   }
 
-  // Calculate income score
-  calculateIncomeScore(monthlyIncome, incomeLevel) {
+  // Assess income factor
+  assessIncome(monthlyIncome, stability) {
     let score = 0;
     
-    // Base score from income level
-    switch (incomeLevel) {
-      case 'high':
-        score = 80;
-        break;
-      case 'medium':
-        score = 60;
-        break;
-      case 'low':
-        score = 40;
-        break;
-      default:
-        score = 30;
-    }
-
-    // Adjust based on actual income amount
-    if (monthlyIncome >= 5000) {
-      score += 20;
-    } else if (monthlyIncome >= 3000) {
-      score += 10;
-    } else if (monthlyIncome >= 1500) {
-      score += 5;
-    }
-
-    return Math.min(score, this.riskFactors.income.maxScore);
+    // Income amount scoring
+    if (monthlyIncome >= 5000) score += 15;
+    else if (monthlyIncome >= 3000) score += 12;
+    else if (monthlyIncome >= 2000) score += 8;
+    else if (monthlyIncome >= 1000) score += 4;
+    
+    // Income stability scoring
+    if (stability === 'stable') score += 10;
+    else if (stability === 'moderate') score += 6;
+    else if (stability === 'unstable') score += 2;
+    
+    return Math.min(25, score);
   }
 
-  // Calculate credit history score
-  calculateCreditHistoryScore(creditHistory) {
-    switch (creditHistory) {
-      case 'excellent':
-        return 100;
-      case 'good':
-        return 80;
-      case 'fair':
-        return 60;
-      case 'poor':
-        return 30;
-      case 'none':
-        return 20;
-      default:
-        return 10;
-    }
-  }
-
-  // Calculate employment score
-  calculateEmploymentScore(employmentStatus, employmentDuration) {
+  // Assess employment factor
+  assessEmployment(status, duration) {
     let score = 0;
     
-    // Base score from employment status
-    switch (employmentStatus) {
-      case 'employed':
-        score = 80;
-        break;
-      case 'self_employed':
-        score = 70;
-        break;
-      case 'student':
-        score = 50;
-        break;
-      case 'unemployed':
-        score = 20;
-        break;
-      default:
-        score = 30;
-    }
-
-    // Adjust based on employment duration
-    if (employmentDuration >= 24) { // 2+ years
-      score += 20;
-    } else if (employmentDuration >= 12) { // 1+ years
-      score += 10;
-    } else if (employmentDuration >= 6) { // 6+ months
-      score += 5;
-    }
-
-    return Math.min(score, this.riskFactors.employment.maxScore);
+    // Employment status scoring
+    if (status === 'full_time') score += 12;
+    else if (status === 'part_time') score += 8;
+    else if (status === 'self_employed') score += 6;
+    else if (status === 'contract') score += 4;
+    else if (status === 'unemployed') score += 0;
+    
+    // Employment duration scoring
+    if (duration >= 60) score += 8;
+    else if (duration >= 36) score += 6;
+    else if (duration >= 24) score += 4;
+    else if (duration >= 12) score += 2;
+    
+    return Math.min(20, score);
   }
 
-  // Calculate debt-to-income ratio score
-  calculateDebtToIncomeScore(monthlyIncome, existingDebts) {
-    if (monthlyIncome <= 0) return 0;
+  // Assess credit history factor
+  assessCreditHistory(creditHistory, paymentHistory) {
+    let score = 0;
     
-    const debtToIncomeRatio = existingDebts / monthlyIncome;
+    // Credit history scoring
+    if (creditHistory === 'excellent') score += 10;
+    else if (creditHistory === 'good') score += 8;
+    else if (creditHistory === 'fair') score += 5;
+    else if (creditHistory === 'poor') score += 2;
+    else if (creditHistory === 'none') score += 0;
     
-    if (debtToIncomeRatio <= 0.2) {
-      return 100;
-    } else if (debtToIncomeRatio <= 0.3) {
-      return 80;
-    } else if (debtToIncomeRatio <= 0.4) {
-      return 60;
-    } else if (debtToIncomeRatio <= 0.5) {
-      return 40;
-    } else {
-      return 20;
-    }
+    // Payment history scoring
+    if (paymentHistory >= 95) score += 5;
+    else if (paymentHistory >= 90) score += 3;
+    else if (paymentHistory >= 80) score += 1;
+    
+    return Math.min(15, score);
   }
 
-  // Calculate purpose score
-  calculatePurposeScore(purpose, amount) {
-    let score = 60; // Base score
+  // Assess debt-to-income ratio factor
+  assessDebtToIncome(monthlyIncome, monthlyDebts) {
+    if (monthlyIncome === 0) return 0;
     
-    // Positive factors
-    const positiveKeywords = ['education', 'business', 'medical', 'home', 'vehicle', 'emergency'];
-    const negativeKeywords = ['gambling', 'luxury', 'entertainment', 'vacation'];
+    const ratio = monthlyDebts / monthlyIncome;
+    let score = 15;
     
-    const purposeLower = purpose.toLowerCase();
+    if (ratio > 0.5) score = 0;
+    else if (ratio > 0.4) score = 3;
+    else if (ratio > 0.3) score = 6;
+    else if (ratio > 0.2) score = 9;
+    else if (ratio > 0.1) score = 12;
     
-    // Check for positive keywords
-    for (const keyword of positiveKeywords) {
-      if (purposeLower.includes(keyword)) {
-        score += 20;
-        break;
-      }
-    }
-    
-    // Check for negative keywords
-    for (const keyword of negativeKeywords) {
-      if (purposeLower.includes(keyword)) {
-        score -= 30;
-        break;
-      }
-    }
-    
-    // Adjust based on amount (reasonable amounts get higher scores)
-    if (amount <= 1000) {
-      score += 10;
-    } else if (amount <= 5000) {
-      score += 5;
-    } else if (amount > 10000) {
-      score -= 10;
-    }
-    
-    return Math.max(0, Math.min(score, this.riskFactors.purpose.maxScore));
+    return score;
   }
 
-  // Calculate verification score
-  calculateVerificationScore(verificationStatus) {
-    switch (verificationStatus) {
-      case 'verified':
-        return 100;
-      case 'pending':
-        return 50;
-      case 'unverified':
-        return 20;
-      default:
-        return 10;
-    }
+  // Assess collateral factor
+  assessCollateral(collateralValue, loanAmount) {
+    if (collateralValue === 0 || loanAmount === 0) return 0;
+    
+    const ratio = collateralValue / loanAmount;
+    let score = 0;
+    
+    if (ratio >= 2.0) score = 10;
+    else if (ratio >= 1.5) score = 8;
+    else if (ratio >= 1.2) score = 6;
+    else if (ratio >= 1.0) score = 4;
+    
+    return score;
+  }
+
+  // Assess loan purpose factor
+  assessPurpose(purpose, businessPlan) {
+    let score = 0;
+    
+    // Purpose scoring
+    const purposeScores = {
+      'business_expansion': 8,
+      'education': 7,
+      'home_improvement': 6,
+      'debt_consolidation': 5,
+      'emergency': 4,
+      'personal': 3
+    };
+    
+    score += purposeScores[purpose] || 3;
+    
+    // Business plan scoring
+    if (businessPlan && businessPlan.length > 100) score += 2;
+    
+    return Math.min(10, score);
+  }
+
+  // Assess social score factor
+  assessSocialScore(reputationScore, connectionsCount) {
+    let score = 0;
+    
+    // Reputation score scoring
+    if (reputationScore >= 800) score += 3;
+    else if (reputationScore >= 600) score += 2;
+    else if (reputationScore >= 400) score += 1;
+    
+    // Connections scoring
+    if (connectionsCount >= 20) score += 2;
+    else if (connectionsCount >= 10) score += 1;
+    
+    return Math.min(5, score);
   }
 
   // Get risk level based on score
@@ -226,36 +203,32 @@ class RiskAssessmentService {
     return 'very_high';
   }
 
-  // Generate recommendations based on risk factors
-  generateRecommendations(factorScores, overallScore) {
+  // Generate recommendations based on factor scores
+  generateRecommendations(factorScores, totalScore) {
     const recommendations = [];
     
-    if (factorScores.income < 50) {
-      recommendations.push('Consider providing additional income documentation');
+    if (factorScores.income < 15) {
+      recommendations.push('Consider increasing your income or providing additional income sources');
     }
     
-    if (factorScores.creditHistory < 40) {
-      recommendations.push('Build credit history through small loans or credit cards');
+    if (factorScores.employment < 12) {
+      recommendations.push('Stable employment history would improve your risk profile');
     }
     
-    if (factorScores.employment < 50) {
-      recommendations.push('Consider stable employment or longer employment history');
+    if (factorScores.creditHistory < 10) {
+      recommendations.push('Building a positive credit history will help your application');
     }
     
-    if (factorScores.debtToIncome < 50) {
-      recommendations.push('Reduce existing debt before applying for new loans');
+    if (factorScores.debtToIncome < 10) {
+      recommendations.push('Reducing your debt-to-income ratio will improve your eligibility');
     }
     
-    if (factorScores.purpose < 50) {
-      recommendations.push('Provide more detailed explanation of loan purpose');
+    if (factorScores.collateral < 6) {
+      recommendations.push('Providing collateral can improve your loan terms');
     }
     
-    if (factorScores.verification < 50) {
-      recommendations.push('Complete account verification process');
-    }
-    
-    if (overallScore < 40) {
-      recommendations.push('Consider smaller loan amounts or co-signer options');
+    if (totalScore < 50) {
+      recommendations.push('Consider a smaller loan amount for your first application');
     }
     
     return recommendations;
@@ -263,106 +236,62 @@ class RiskAssessmentService {
 
   // Calculate maximum loan amount based on risk score
   calculateMaxLoanAmount(riskScore, monthlyIncome) {
-    const baseMultiplier = monthlyIncome * 0.3; // 30% of monthly income
+    const baseMultiplier = riskScore / 100;
+    const maxMultiplier = 12; // Maximum 12 months of income
     
-    if (riskScore >= 80) {
-      return baseMultiplier * 3; // Up to 3 months of income
-    } else if (riskScore >= 60) {
-      return baseMultiplier * 2; // Up to 2 months of income
-    } else if (riskScore >= 40) {
-      return baseMultiplier * 1.5; // Up to 1.5 months of income
-    } else {
-      return baseMultiplier; // Up to 1 month of income
+    return Math.round(monthlyIncome * baseMultiplier * maxMultiplier);
+  }
+
+  // Calculate suggested interest rate based on risk score
+  calculateSuggestedInterestRate(riskScore) {
+    if (riskScore >= 80) return 5; // Low risk: 5%
+    if (riskScore >= 60) return 8; // Medium risk: 8%
+    if (riskScore >= 40) return 12; // High risk: 12%
+    return 18; // Very high risk: 18%
+  }
+
+  // Update user risk assessment
+  async updateUserRiskAssessment(userId, assessmentResult) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      user.risk_score = assessmentResult.riskScore;
+      user.risk_factors = Object.entries(assessmentResult.factorScores).map(([factor, score]) => ({
+        factor,
+        weight: this.riskFactors[factor]?.weight || 0,
+        score
+      }));
+      user.risk_assessment_date = new Date();
+
+      await user.save();
+      return user;
+    } catch (error) {
+      console.error('Error updating user risk assessment:', error);
+      throw error;
     }
   }
 
-  // Calculate recommended interest rate based on risk score
-  calculateRecommendedInterestRate(riskScore) {
-    const baseRate = 5; // Base 5% interest rate
-    
-    if (riskScore >= 80) {
-      return baseRate + 2; // 7%
-    } else if (riskScore >= 60) {
-      return baseRate + 5; // 10%
-    } else if (riskScore >= 40) {
-      return baseRate + 10; // 15%
-    } else {
-      return baseRate + 20; // 25%
-    }
-  }
+  // Get risk assessment history
+  async getRiskAssessmentHistory(userId) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) return [];
 
-  // Assess investment risk for investors
-  assessInvestmentRisk(investment, borrowerRiskScore) {
-    const investmentRisk = {
-      low: 0.1,
-      medium: 0.3,
-      high: 0.6,
-      very_high: 0.9
-    };
-    
-    const borrowerRiskLevel = this.getRiskLevel(borrowerRiskScore);
-    const defaultProbability = investmentRisk[borrowerRiskLevel] || 0.5;
-    
-    return {
-      riskLevel: borrowerRiskLevel,
-      defaultProbability,
-      expectedReturn: this.calculateExpectedReturn(investment.interestRate, defaultProbability),
-      recommendation: this.getInvestmentRecommendation(borrowerRiskLevel)
-    };
-  }
-
-  // Calculate expected return
-  calculateExpectedReturn(interestRate, defaultProbability) {
-    const successProbability = 1 - defaultProbability;
-    return (interestRate * successProbability) - (100 * defaultProbability);
-  }
-
-  // Get investment recommendation
-  getInvestmentRecommendation(riskLevel) {
-    switch (riskLevel) {
-      case 'low':
-        return 'Safe investment with low risk of default';
-      case 'medium':
-        return 'Moderate risk investment with good potential returns';
-      case 'high':
-        return 'High risk investment, consider diversifying portfolio';
-      case 'very_high':
-        return 'Very high risk, only invest what you can afford to lose';
-      default:
-        return 'Risk assessment incomplete';
+      // This would typically come from a separate risk assessment history collection
+      // For now, return current assessment as placeholder
+      return [{
+        date: user.risk_assessment_date,
+        score: user.risk_score,
+        factors: user.risk_factors
+      }];
+    } catch (error) {
+      console.error('Error getting risk assessment history:', error);
+      return [];
     }
-  }
-
-  // Update risk score based on payment history
-  updateRiskScoreWithPaymentHistory(currentScore, paymentHistory) {
-    let adjustment = 0;
-    
-    // Positive adjustments for good payment history
-    if (paymentHistory.onTimePayments > 0) {
-      adjustment += Math.min(paymentHistory.onTimePayments * 2, 20);
-    }
-    
-    // Negative adjustments for late payments
-    if (paymentHistory.latePayments > 0) {
-      adjustment -= Math.min(paymentHistory.latePayments * 5, 30);
-    }
-    
-    // Negative adjustments for defaults
-    if (paymentHistory.defaults > 0) {
-      adjustment -= Math.min(paymentHistory.defaults * 20, 50);
-    }
-    
-    const newScore = Math.max(0, Math.min(100, currentScore + adjustment));
-    
-    logger.info('Risk score updated with payment history', {
-      previousScore: currentScore,
-      newScore,
-      adjustment,
-      paymentHistory
-    });
-    
-    return newScore;
   }
 }
 
-module.exports = new RiskAssessmentService(); 
+module.exports = RiskAssessmentService; 
