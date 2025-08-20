@@ -344,31 +344,34 @@ router.get('/my-investments', authenticateToken, async (req, res) => {
   }
 });
 
+// Helper function to generate repayment schedule
 function generateRepaymentSchedule(amount, interestRate, duration) {
-  const schedule = [];
-  const totalAmount = amount * (1 + interestRate / 100);
-  const monthlyPayment = totalAmount / duration;
+  const totalInterest = (amount * interestRate / 100);
+  const totalRepayment = amount + totalInterest;
+  const dailyRepayment = totalRepayment / duration;
   
+  const schedule = [];
   for (let i = 1; i <= duration; i++) {
-    const dueDate = new Date();
-    dueDate.setMonth(dueDate.getMonth() + i);
-    
     schedule.push({
-      amount: monthlyPayment,
-      dueDate,
-      paid: false
+      day: i,
+      amount: dailyRepayment,
+      dueDate: new Date(Date.now() + i * 24 * 60 * 60 * 1000)
     });
   }
   
   return schedule;
 }
 
+// Helper function to get investment approval program
 function getInvestmentApprovalProgram() {
-  return 'AiABASYCJgMSQAA7AQAiEkAANAEhBBJENAQiEkQ0AiEGEkQ0AyEHEkQoZEkiEkw0BCEFEjQAEUQ0AiEGEjQAEUQ0AyEHEjQAEUQiQw==';
+  // This would typically load from a compiled contract file
+  return process.env.INVESTMENT_APPROVAL_PROGRAM || 'base64_encoded_program';
 }
 
+// Helper function to get investment clear program
 function getInvestmentClearProgram() {
-  return 'AiABASYCJgMSQAA7AQAiEkAANAEhBBJENAQiEkQ0AiEGEkQ0AyEHEkQoZEkiEkw0BCEFEjQAEUQ0AiEGEjQAEUQ0AyEHEjQAEUQiQw==';
+  // This would typically load from a compiled contract file
+  return process.env.INVESTMENT_CLEAR_PROGRAM || 'base64_encoded_program';
 }
 
 module.exports = router;
