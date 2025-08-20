@@ -263,6 +263,58 @@ router.post('/emergency-withdrawal', authenticateToken, async (req, res) => {
   }
 });
 
+// Get investment statistics
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    const stats = await Investment.aggregate([
+      {
+        $facet: {
+          totalInvestments: [
+            { $match: { borrower: userId } },
+            { $count: 'count' }
+          ],
+          totalFunded: [
+            { $match: { borrower: userId, status: 'active' } },
+            { $count: 'count' }
+          ],
+          totalCompleted: [
+            { $match: { borrower: userId, status: 'completed' } },
+            { $count: 'count' }
+          ],
+          totalDefaulted: [
+            { $match: { borrower: userId, status: 'defaulted' } },
+            { $count: 'count' }
+          ],
+          totalAmount: [
+            { $match: { borrower: userId } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+          ],
+          totalRepaid: [
+            { $match: { borrower: userId, status: 'completed' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+          ]
+        }
+      }
+    ]);
+
+    const formattedStats = {
+      totalInvestments: stats[0].totalInvestments[0]?.count || 0,
+      totalFunded: stats[0].totalFunded[0]?.count || 0,
+      totalCompleted: stats[0].totalCompleted[0]?.count || 0,
+      totalDefaulted: stats[0].totalDefaulted[0]?.count || 0,
+      totalAmount: stats[0].totalAmount[0]?.total || 0,
+      totalRepaid: stats[0].totalRepaid[0]?.total || 0
+    };
+
+    res.json({ stats: formattedStats });
+  } catch (error) {
+    console.error('Get investment stats error:', error);
+    res.status(500).json({ error: 'Failed to get investment statistics' });
+  }
+});
+
 router.get('/explore', async (req, res) => {
   try {
     const { page = 1, limit = 10, status = 'pending' } = req.query;
