@@ -5,39 +5,46 @@ const userSchema = new mongoose.Schema({
   // Basic Information
   username: {
     type: String,
-    required: true,
+    required: [true, 'Username is required'],
     unique: true,
     trim: true,
-    minlength: 3,
-    maxlength: 30,
-    match: /^[a-zA-Z0-9_]+$/
+    minlength: [3, 'Username must be at least 3 characters long'],
+    maxlength: [30, 'Username cannot exceed 30 characters'],
+    match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
   },
   email: {
     type: String,
-    required: true,
+    required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
     trim: true,
-    match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
   },
   password: {
     type: String,
-    required: true,
-    minlength: 8
+    required: [true, 'Password is required'],
+    minlength: [8, 'Password must be at least 8 characters long']
   },
   full_name: {
     type: String,
-    required: true,
+    required: [true, 'Full name is required'],
     trim: true,
-    maxlength: 100
+    maxlength: [100, 'Full name cannot exceed 100 characters']
   },
   
   // Blockchain Information
   wallet_address: {
     type: String,
-    required: true,
+    required: [true, 'Wallet address is required'],
     unique: true,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        // More flexible Algorand address validation
+        return /^[A-Z2-7]{58}$/.test(v) || /^[A-Z2-7]{25,58}$/.test(v);
+      },
+      message: 'Invalid Algorand wallet address format'
+    }
   },
   wallet_private_key: {
     type: String,
@@ -48,28 +55,119 @@ const userSchema = new mongoose.Schema({
   // Profile Information
   profile_picture: {
     type: String,
-    default: null
+    default: null,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^https?:\/\/.+/.test(v) || /^data:image\/.+;base64,/.test(v);
+      },
+      message: 'Profile picture must be a valid URL or base64 data URI'
+    }
   },
   bio: {
     type: String,
-    maxlength: 500,
+    maxlength: [500, 'Bio cannot exceed 500 characters'],
     default: ''
   },
   location: {
     type: String,
-    maxlength: 100,
+    maxlength: [100, 'Location cannot exceed 100 characters'],
     default: ''
   },
   phone_number: {
     type: String,
-    match: /^\+?[\d\s\-\(\)]+$/,
+    match: [/^\+?[\d\s\-\(\)]+$/, 'Please provide a valid phone number'],
     default: null
   },
   
-  // Verification and Security
+  // Enhanced Social Features
+  social_links: {
+    twitter: { 
+      type: String, 
+      default: null,
+      validate: {
+        validator: function(v) {
+          if (!v) return true;
+          return /^https?:\/\/(www\.)?twitter\.com\/.+/.test(v);
+        },
+        message: 'Please provide a valid Twitter URL'
+      }
+    },
+    linkedin: { 
+      type: String, 
+      default: null,
+      validate: {
+        validator: function(v) {
+          if (!v) return true;
+          return /^https?:\/\/(www\.)?linkedin\.com\/.+/.test(v);
+        },
+        message: 'Please provide a valid LinkedIn URL'
+      }
+    },
+    github: { 
+      type: String, 
+      default: null,
+      validate: {
+        validator: function(v) {
+          if (!v) return true;
+          return /^https?:\/\/(www\.)?github\.com\/.+/.test(v);
+        },
+        message: 'Please provide a valid GitHub URL'
+      }
+    },
+    website: { 
+      type: String, 
+      default: null,
+      validate: {
+        validator: function(v) {
+          if (!v) return true;
+          return /^https?:\/\/.+/.test(v);
+        },
+        message: 'Please provide a valid website URL'
+      }
+    }
+  },
+  
+  // Reputation System
+  reputation_score: {
+    type: Number,
+    min: [0, 'Reputation score cannot be negative'],
+    max: [1000, 'Reputation score cannot exceed 1000'],
+    default: 100
+  },
+  reputation_level: {
+    type: String,
+    enum: {
+      values: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+      message: 'Invalid reputation level'
+    },
+    default: 'bronze'
+  },
+  reputation_history: [{
+    score_change: { 
+      type: Number, 
+      required: [true, 'Score change is required'] 
+    },
+    reason: { 
+      type: String, 
+      required: [true, 'Reason is required'],
+      maxlength: [200, 'Reason cannot exceed 200 characters']
+    },
+    timestamp: { type: Date, default: Date.now }
+  }],
+  
+  // Enhanced Verification and Security
   verified: {
     type: Boolean,
     default: false
+  },
+  verification_status: {
+    type: String,
+    enum: {
+      values: ['pending', 'verified', 'rejected', 'suspended'],
+      message: 'Invalid verification status'
+    },
+    default: 'pending'
   },
   verification_token: {
     type: String,
@@ -79,6 +177,28 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  verification_documents: [{
+    type: { 
+      type: String, 
+      required: [true, 'Document type is required'],
+      enum: {
+        values: ['id_card', 'passport', 'drivers_license', 'utility_bill', 'bank_statement', 'other'],
+        message: 'Invalid document type'
+      }
+    },
+    url: { 
+      type: String, 
+      required: [true, 'Document URL is required'],
+      validate: {
+        validator: function(v) {
+          return /^https?:\/\/.+/.test(v) || /^data:.+;base64,/.test(v);
+        },
+        message: 'Document URL must be a valid URL or base64 data URI'
+      }
+    },
+    uploaded_at: { type: Date, default: Date.now },
+    verified: { type: Boolean, default: false }
+  }],
   mfa_enabled: {
     type: Boolean,
     default: false
@@ -93,137 +213,167 @@ const userSchema = new mongoose.Schema({
     select: false
   }],
   
-  // Risk Assessment
+  // Enhanced Risk Assessment
   risk_score: {
     type: Number,
-    min: 0,
-    max: 100,
-    default: null
-  },
-  risk_level: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'very_high'],
-    default: null
-  },
-  risk_assessment_completed: {
-    type: Boolean,
-    default: false
-  },
-  risk_assessment_data: {
-    income_level: {
-      type: String,
-      enum: ['low', 'medium', 'high']
-    },
-    credit_history: {
-      type: String,
-      enum: ['none', 'poor', 'fair', 'good', 'excellent']
-    },
-    employment_status: {
-      type: String,
-      enum: ['employed', 'self_employed', 'unemployed', 'student']
-    },
-    monthly_income: {
-      type: Number,
-      min: 0
-    },
-    existing_debts: {
-      type: Number,
-      min: 0
-    },
-    employment_duration: {
-      type: Number,
-      min: 0
-    }
-  },
-  
-  // Reputation and Social Features
-  reputation_score: {
-    type: Number,
-    min: 0,
-    max: 100,
+    min: [0, 'Risk score cannot be negative'],
+    max: [100, 'Risk score cannot exceed 100'],
     default: 50
   },
-  total_investments_received: {
-    type: Number,
-    default: 0
-  },
-  total_investments_made: {
-    type: Number,
-    default: 0
-  },
-  total_amount_borrowed: {
-    type: Number,
-    default: 0
-  },
-  total_amount_invested: {
-    type: Number,
-    default: 0
-  },
-  on_time_repayments: {
-    type: Number,
-    default: 0
-  },
-  late_repayments: {
-    type: Number,
-    default: 0
-  },
-  defaults: {
-    type: Number,
-    default: 0
-  },
-  
-  // Account Status
-  role: {
-    type: String,
-    enum: ['user', 'moderator', 'admin'],
-    default: 'user'
-  },
-  status: {
-    type: String,
-    enum: ['active', 'suspended', 'banned'],
-    default: 'active'
-  },
-  is_online: {
-    type: Boolean,
-    default: false
-  },
-  last_seen: {
+  risk_factors: [{
+    factor: { 
+      type: String, 
+      required: [true, 'Risk factor is required'],
+      maxlength: [100, 'Risk factor cannot exceed 100 characters']
+    },
+    weight: { 
+      type: Number, 
+      min: [0, 'Weight cannot be negative'], 
+      max: [1, 'Weight cannot exceed 1'], 
+      required: [true, 'Weight is required'] 
+    },
+    score: { 
+      type: Number, 
+      min: [0, 'Score cannot be negative'], 
+      max: [100, 'Score cannot exceed 100'], 
+      required: [true, 'Score is required'] 
+    }
+  }],
+  risk_assessment_date: {
     type: Date,
     default: Date.now
   },
   
-  // Preferences
-  notification_preferences: {
-    email_notifications: {
-      type: Boolean,
-      default: true
+  // Investment Statistics
+  total_invested: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total invested cannot be negative']
+  },
+  total_borrowed: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total borrowed cannot be negative']
+  },
+  total_repayments: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total repayments cannot be negative']
+  },
+  successful_investments: {
+    type: Number,
+    default: 0,
+    min: [0, 'Successful investments cannot be negative']
+  },
+  defaulted_investments: {
+    type: Number,
+    default: 0,
+    min: [0, 'Defaulted investments cannot be negative']
+  },
+  
+  // Enhanced Social Features
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    validate: {
+      validator: function(v) {
+        return !this.following.includes(v);
+      },
+      message: 'Cannot follow yourself'
+    }
+  }],
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    validate: {
+      validator: function(v) {
+        return !this.followers.includes(v);
+      },
+      message: 'Cannot follow yourself'
+    }
+  }],
+  connections: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    strength: { 
+      type: Number, 
+      min: [1, 'Connection strength must be at least 1'], 
+      max: [10, 'Connection strength cannot exceed 10'], 
+      default: 5 
     },
-    push_notifications: {
-      type: Boolean,
-      default: true
+    connected_at: { type: Date, default: Date.now }
+  }],
+  
+  // Preferences and Settings
+  preferences: {
+    notifications: {
+      email: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false }
     },
-    investment_alerts: {
-      type: Boolean,
-      default: true
+    privacy: {
+      profile_public: { type: Boolean, default: true },
+      investment_history_public: { type: Boolean, default: false },
+      risk_score_public: { type: Boolean, default: false }
     },
-    payment_reminders: {
-      type: Boolean,
-      default: true
-    },
-    risk_assessment_reminders: {
-      type: Boolean,
-      default: true
+    investment: {
+      min_amount: { 
+        type: Number, 
+        default: 0.001,
+        min: [0.001, 'Minimum investment amount must be at least 0.001']
+      },
+      max_amount: { 
+        type: Number, 
+        default: 1000,
+        min: [0.001, 'Maximum investment amount must be at least 0.001']
+      },
+      preferred_risk_level: { 
+        type: String, 
+        enum: {
+          values: ['low', 'medium', 'high'],
+          message: 'Invalid risk level'
+        }, 
+        default: 'medium' 
+      }
     }
   },
   
-  // Security and Privacy
-  login_attempts: {
-    type: Number,
-    default: 0
+  // Activity and Engagement
+  last_active: {
+    type: Date,
+    default: Date.now
   },
-  lock_until: {
+  login_count: {
+    type: Number,
+    default: 0,
+    min: [0, 'Login count cannot be negative']
+  },
+  badges: [{
+    name: { 
+      type: String, 
+      required: [true, 'Badge name is required'],
+      maxlength: [50, 'Badge name cannot exceed 50 characters']
+    },
+    description: { 
+      type: String, 
+      required: [true, 'Badge description is required'],
+      maxlength: [200, 'Badge description cannot exceed 200 characters']
+    },
+    earned_at: { type: Date, default: Date.now }
+  }],
+  
+  // Enhanced Security
+  failed_login_attempts: {
+    type: Number,
+    default: 0,
+    min: [0, 'Failed login attempts cannot be negative']
+  },
+  account_locked_until: {
     type: Date,
     default: null
+  },
+  password_changed_at: {
+    type: Date,
+    default: Date.now
   },
   password_reset_token: {
     type: String,
@@ -242,140 +392,214 @@ const userSchema = new mongoose.Schema({
   updated_at: {
     type: Date,
     default: Date.now
-  },
-  last_login: {
-    type: Date,
-    default: null
   }
 }, {
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Indexes for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
-userSchema.index({ wallet_address: 1 });
-userSchema.index({ verified: 1 });
-userSchema.index({ risk_score: 1 });
-userSchema.index({ reputation_score: 1 });
-userSchema.index({ status: 1 });
-userSchema.index({ created_at: -1 });
-
-// Virtual for account age
-userSchema.virtual('account_age').get(function() {
-  return Math.floor((Date.now() - this.created_at) / (1000 * 60 * 60 * 24));
+// Virtual for reputation level calculation
+userSchema.virtual('reputation_level_calculated').get(function() {
+  if (this.reputation_score >= 800) return 'diamond';
+  if (this.reputation_score >= 600) return 'platinum';
+  if (this.reputation_score >= 400) return 'gold';
+  if (this.reputation_score >= 200) return 'silver';
+  return 'bronze';
 });
 
-// Virtual for repayment rate
-userSchema.virtual('repayment_rate').get(function() {
-  const total = this.on_time_repayments + this.late_repayments + this.defaults;
-  return total > 0 ? (this.on_time_repayments / total) * 100 : 100;
+// Virtual for investment success rate
+userSchema.virtual('success_rate').get(function() {
+  const total = this.successful_investments + this.defaulted_investments;
+  return total > 0 ? (this.successful_investments / total * 100).toFixed(2) : 0;
 });
 
-// Pre-save middleware to hash password
+// Virtual for total portfolio value
+userSchema.virtual('portfolio_value').get(function() {
+  return this.total_invested + this.total_borrowed;
+});
+
+// Pre-save middleware for password hashing
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+    this.password_changed_at = new Date();
   }
+  
+  // Update reputation level based on score
+  this.reputation_level = this.reputation_level_calculated;
+  
+  // Update last active timestamp
+  this.last_active = new Date();
+  
+  next();
 });
 
-// Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-// Method to check if account is locked
-userSchema.methods.isLocked = function() {
-  return !!(this.lock_until && this.lock_until > Date.now());
-};
-
-// Method to increment login attempts
-userSchema.methods.incLoginAttempts = function() {
-  if (this.lock_until && this.lock_until < Date.now()) {
-    return this.updateOne({
-      $unset: { lock_until: 1 },
-      $set: { login_attempts: 1 }
-    });
+// Pre-save middleware for account security
+userSchema.pre('save', function(next) {
+  if (this.failed_login_attempts >= 5) {
+    this.account_locked_until = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
   }
-  
-  const updates = { $inc: { login_attempts: 1 } };
-  if (this.login_attempts + 1 >= 5 && !this.isLocked()) {
-    updates.$set = { lock_until: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
-  }
-  
-  return this.updateOne(updates);
+  next();
+});
+
+// Instance method to check password
+userSchema.methods.checkPassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to reset login attempts
-userSchema.methods.resetLoginAttempts = function() {
-  return this.updateOne({
-    $unset: { login_attempts: 1, lock_until: 1 }
+// Instance method to update reputation
+userSchema.methods.updateReputation = function(scoreChange, reason) {
+  this.reputation_score = Math.max(0, Math.min(1000, this.reputation_score + scoreChange));
+  this.reputation_history.push({
+    score_change: scoreChange,
+    reason: reason,
+    timestamp: new Date()
   });
+  
+  // Keep only last 50 reputation changes
+  if (this.reputation_history.length > 50) {
+    this.reputation_history = this.reputation_history.slice(-50);
+  }
+  
+  return this.save();
 };
 
-// Method to update reputation score
-userSchema.methods.updateReputationScore = function() {
-  let score = 50; // Base score
-  
-  // Adjust based on repayment history
-  const totalRepayments = this.on_time_repayments + this.late_repayments + this.defaults;
-  if (totalRepayments > 0) {
-    const onTimeRate = this.on_time_repayments / totalRepayments;
-    score += onTimeRate * 30; // Up to 30 points for good repayment history
+// Instance method to add badge
+userSchema.methods.addBadge = function(name, description) {
+  const existingBadge = this.badges.find(badge => badge.name === name);
+  if (!existingBadge) {
+    this.badges.push({ name, description });
+    return this.save();
   }
-  
-  // Adjust based on risk score
-  if (this.risk_score) {
-    score += (this.risk_score - 50) * 0.2; // Up to 10 points for good risk score
-  }
-  
-  // Adjust based on account age
-  const accountAge = this.account_age;
-  if (accountAge > 365) {
-    score += 10; // Bonus for old accounts
-  } else if (accountAge > 30) {
-    score += 5; // Small bonus for established accounts
-  }
-  
-  // Adjust based on verification
-  if (this.verified) {
-    score += 5;
-  }
-  
-  // Ensure score is within bounds
-  score = Math.max(0, Math.min(100, score));
-  
-  return this.updateOne({ reputation_score: Math.round(score) });
+  return Promise.resolve(this);
 };
 
-// Static method to find users by risk level
-userSchema.statics.findByRiskLevel = function(riskLevel) {
-  return this.find({ risk_level: riskLevel, status: 'active' });
+// Instance method to check if account is locked
+userSchema.methods.isLocked = function() {
+  return this.account_locked_until && this.account_locked_until > new Date();
+};
+
+// Instance method to increment failed login attempts
+userSchema.methods.incrementFailedLogins = function() {
+  this.failed_login_attempts += 1;
+  return this.save();
+};
+
+// Instance method to reset failed login attempts
+userSchema.methods.resetFailedLogins = function() {
+  this.failed_login_attempts = 0;
+  this.account_locked_until = null;
+  return this.save();
+};
+
+// Static method to find users by reputation level
+userSchema.statics.findByReputationLevel = function(level) {
+  return this.find({ reputation_level: level });
+};
+
+// Static method to find top investors
+userSchema.statics.findTopInvestors = function(limit = 10) {
+  return this.find()
+    .sort({ total_invested: -1, reputation_score: -1 })
+    .limit(limit);
 };
 
 // Static method to find verified users
-userSchema.statics.findVerified = function() {
-  return this.find({ verified: true, status: 'active' });
+userSchema.statics.findVerifiedUsers = function() {
+  return this.find({ verified: true, verification_status: 'verified' });
 };
 
-// Static method to get top borrowers
-userSchema.statics.getTopBorrowers = function(limit = 10) {
-  return this.find({ status: 'active' })
-    .sort({ total_investments_received: -1, reputation_score: -1 })
-    .limit(limit);
+// Indexes for better query performance
+userSchema.index({ username: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ wallet_address: 1 });
+userSchema.index({ reputation_score: -1 });
+userSchema.index({ risk_score: 1 });
+userSchema.index({ verified: 1 });
+userSchema.index({ created_at: -1 });
+userSchema.index({ last_active: -1 });
+
+// Instance method to follow another user
+userSchema.methods.followUser = function(userIdToFollow) {
+  if (!this.following.includes(userIdToFollow)) {
+    this.following.push(userIdToFollow);
+    return this.save();
+  }
+  return Promise.resolve(this);
 };
 
-// Static method to get top investors
-userSchema.statics.getTopInvestors = function(limit = 10) {
-  return this.find({ status: 'active' })
-    .sort({ total_investments_made: -1, reputation_score: -1 })
-    .limit(limit);
+// Instance method to unfollow another user
+userSchema.methods.unfollowUser = function(userIdToUnfollow) {
+  this.following = this.following.filter(id => id.toString() !== userIdToUnfollow.toString());
+  return this.save();
+};
+
+// Instance method to add connection
+userSchema.methods.addConnection = function(userId, strength = 5) {
+  const existingConnection = this.connections.find(conn => conn.user.toString() === userId.toString());
+  if (!existingConnection) {
+    this.connections.push({
+      user: userId,
+      strength: strength,
+      connected_at: new Date()
+    });
+    return this.save();
+  }
+  return Promise.resolve(this);
+};
+
+// Instance method to update connection strength
+userSchema.methods.updateConnectionStrength = function(userId, newStrength) {
+  const connection = this.connections.find(conn => conn.user.toString() === userId.toString());
+  if (connection) {
+    connection.strength = Math.max(1, Math.min(10, newStrength));
+    return this.save();
+  }
+  return Promise.resolve(this);
+};
+
+// Instance method to get top connections
+userSchema.methods.getTopConnections = function(limit = 5) {
+  return this.connections
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, limit);
+};
+
+// Instance method to calculate social score
+userSchema.methods.calculateSocialScore = function() {
+  const followerBonus = this.followers.length * 2;
+  const connectionBonus = this.connections.reduce((sum, conn) => sum + conn.strength, 0);
+  const activityBonus = this.login_count * 0.1;
+  
+  return Math.min(1000, this.reputation_score + followerBonus + connectionBonus + activityBonus);
+};
+
+// Instance method to update preferences
+userSchema.methods.updatePreferences = function(newPreferences) {
+  this.preferences = { ...this.preferences, ...newPreferences };
+  return this.save();
+};
+
+// Instance method to add verification document
+userSchema.methods.addVerificationDocument = function(type, url) {
+  this.verification_documents.push({
+    type,
+    url,
+    uploaded_at: new Date(),
+    verified: false
+  });
+  return this.save();
+};
+
+// Instance method to mark document as verified
+userSchema.methods.verifyDocument = function(documentId) {
+  const document = this.verification_documents.id(documentId);
+  if (document) {
+    document.verified = true;
+    return this.save();
+  }
+  return Promise.resolve(this);
 };
 
 module.exports = mongoose.model('User', userSchema);
