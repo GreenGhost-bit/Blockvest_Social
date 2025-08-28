@@ -4,101 +4,199 @@ const investmentSchema = new mongoose.Schema({
   // Blockchain Information
   app_id: {
     type: Number,
-    required: true,
-    unique: true
+    required: [true, 'App ID is required'],
+    unique: true,
+    min: [1, 'App ID must be a positive number']
   },
   tx_id: {
     type: String,
-    required: true
+    required: [true, 'Transaction ID is required'],
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return /^[A-Z2-7]{52}$/.test(v) || /^[a-f0-9]{64}$/.test(v);
+      },
+      message: 'Invalid transaction ID format'
+    }
   },
   
   // Investment Details
   amount: {
     type: Number,
-    required: true,
-    min: 0.001 // Minimum 0.001 ALGO
+    required: [true, 'Investment amount is required'],
+    min: [0.001, 'Minimum investment amount is 0.001 ALGO'],
+    validate: {
+      validator: function(v) {
+        return v > 0 && v <= 1000000; // Max 1M ALGO
+      },
+      message: 'Investment amount must be between 0.001 and 1,000,000 ALGO'
+    }
   },
   purpose: {
     type: String,
-    required: true,
-    maxlength: 500
+    required: [true, 'Investment purpose is required'],
+    trim: true,
+    maxlength: [500, 'Purpose cannot exceed 500 characters']
   },
   description: {
     type: String,
-    maxlength: 1000
+    trim: true,
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
   interest_rate: {
     type: Number,
-    required: true,
-    min: 0,
-    max: 100
+    required: [true, 'Interest rate is required'],
+    min: [0, 'Interest rate cannot be negative'],
+    max: [100, 'Interest rate cannot exceed 100%'],
+    validate: {
+      validator: function(v) {
+        return v >= 0 && v <= 100;
+      },
+      message: 'Interest rate must be between 0% and 100%'
+    }
   },
   duration: {
     type: Number,
-    required: true,
-    min: 1,
-    max: 365 // Maximum 1 year
+    required: [true, 'Investment duration is required'],
+    min: [1, 'Duration must be at least 1 day'],
+    max: [365, 'Duration cannot exceed 365 days'],
+    validate: {
+      validator: function(v) {
+        return Number.isInteger(v) && v >= 1 && v <= 365;
+      },
+      message: 'Duration must be a whole number between 1 and 365 days'
+    }
   },
   
   // Parties
   borrower: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: [true, 'Borrower is required'],
+    validate: {
+      validator: function(v) {
+        return mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid borrower ID'
+    }
   },
   investor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    default: null
+    default: null,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid investor ID'
+    }
   },
   
   // Status and Timeline
   status: {
     type: String,
-    enum: ['pending', 'active', 'completed', 'defaulted', 'paused'],
+    enum: {
+      values: ['pending', 'active', 'completed', 'defaulted', 'paused', 'cancelled'],
+      message: 'Invalid investment status'
+    },
     default: 'pending'
   },
   created_at: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    validate: {
+      validator: function(v) {
+        return v <= new Date();
+      },
+      message: 'Creation date cannot be in the future'
+    }
   },
   funded_at: {
     type: Date,
-    default: null
+    default: null,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return v >= this.created_at;
+      },
+      message: 'Funding date cannot be before creation date'
+    }
   },
   completed_at: {
     type: Date,
-    default: null
+    default: null,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return v >= this.funded_at;
+      },
+      message: 'Completion date cannot be before funding date'
+    }
   },
   due_date: {
     type: Date,
-    default: null
+    default: null,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return v > this.funded_at;
+      },
+      message: 'Due date must be after funding date'
+    }
   },
   
   // Financial Information
   repayment_amount: {
     type: Number,
-    default: null
+    default: null,
+    min: [0, 'Repayment amount cannot be negative'],
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return v >= this.amount;
+      },
+      message: 'Repayment amount must be greater than or equal to investment amount'
+    }
   },
   amount_repaid: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'Amount repaid cannot be negative'],
+    validate: {
+      validator: function(v) {
+        if (!this.repayment_amount) return true;
+        return v <= this.repayment_amount;
+      },
+      message: 'Amount repaid cannot exceed repayment amount'
+    }
   },
   remaining_balance: {
     type: Number,
-    default: null
+    default: null,
+    min: [0, 'Remaining balance cannot be negative']
   },
   
   // Risk and Verification
   risk_score: {
     type: Number,
-    min: 0,
-    max: 100,
-    default: null
+    min: [0, 'Risk score cannot be negative'],
+    max: [100, 'Risk score cannot exceed 100'],
+    default: null,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return v >= 0 && v <= 100;
+      },
+      message: 'Risk score must be between 0 and 100'
+    }
   },
   verification_status: {
     type: String,
-    enum: ['pending', 'verified', 'rejected'],
+    enum: {
+      values: ['pending', 'verified', 'rejected', 'under_review'],
+      message: 'Invalid verification status'
+    },
     default: 'pending'
   },
   
@@ -106,19 +204,36 @@ const investmentSchema = new mongoose.Schema({
   repayments: [{
     amount: {
       type: Number,
-      required: true
+      required: [true, 'Repayment amount is required'],
+      min: [0.001, 'Repayment amount must be at least 0.001 ALGO']
     },
     tx_id: {
       type: String,
-      required: true
+      required: [true, 'Repayment transaction ID is required'],
+      trim: true,
+      validate: {
+        validator: function(v) {
+          return /^[A-Z2-7]{52}$/.test(v) || /^[a-f0-9]{64}$/.test(v);
+        },
+        message: 'Invalid repayment transaction ID format'
+      }
     },
     timestamp: {
       type: Date,
-      default: Date.now
+      default: Date.now,
+      validate: {
+        validator: function(v) {
+          return v <= new Date();
+        },
+        message: 'Repayment timestamp cannot be in the future'
+      }
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'failed'],
+      enum: {
+        values: ['pending', 'confirmed', 'failed', 'cancelled'],
+        message: 'Invalid repayment status'
+      },
       default: 'pending'
     }
   }],
@@ -126,43 +241,74 @@ const investmentSchema = new mongoose.Schema({
   // Social Features
   likes: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    validate: {
+      validator: function(v) {
+        return mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid user ID in likes'
+    }
   }],
   comments: [{
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: [true, 'Comment user is required'],
+      validate: {
+        validator: function(v) {
+          return mongoose.Types.ObjectId.isValid(v);
+        },
+        message: 'Invalid comment user ID'
+      }
     },
     text: {
       type: String,
-      required: true,
-      maxlength: 500
+      required: [true, 'Comment text is required'],
+      trim: true,
+      maxlength: [500, 'Comment cannot exceed 500 characters']
     },
     timestamp: {
       type: Date,
-      default: Date.now
+      default: Date.now,
+      validate: {
+        validator: function(v) {
+          return v <= new Date();
+        },
+        message: 'Comment timestamp cannot be in the future'
+      }
     }
   }],
   
   // Analytics
   views: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'View count cannot be negative']
   },
   shares: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'Share count cannot be negative']
   },
   
   // Metadata
   tags: [{
     type: String,
-    maxlength: 50
+    trim: true,
+    maxlength: [50, 'Tag cannot exceed 50 characters'],
+    validate: {
+      validator: function(v) {
+        return v.length > 0 && v.length <= 50;
+      },
+      message: 'Tag must be between 1 and 50 characters'
+    }
   }],
   category: {
     type: String,
-    enum: ['education', 'business', 'medical', 'home', 'vehicle', 'emergency', 'other'],
+    enum: {
+      values: ['education', 'business', 'medical', 'home', 'vehicle', 'emergency', 'technology', 'agriculture', 'other'],
+      message: 'Invalid investment category'
+    },
     default: 'other'
   },
   
