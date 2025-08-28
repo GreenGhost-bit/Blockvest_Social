@@ -713,3 +713,4 @@ const GovernanceProposals: React.FC = () => {
 };
 
 export default GovernanceProposals;
+
