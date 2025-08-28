@@ -1,223 +1,229 @@
-const winston = require('winston');
-const path = require('path');
+const logger = require('../utils/logger');
 
-// Configure Winston logger
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'blockvest-social' },
-  transports: [
-    new winston.transports.File({ 
-      filename: path.join(__dirname, '../logs/error.log'), 
-      level: 'error' 
-    }),
-    new winston.transports.File({ 
-      filename: path.join(__dirname, '../logs/combined.log') 
-    }),
-  ],
-});
-
-// Add console transport in development
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple()
-  }));
+// Custom error classes for better error handling
+class AppError extends Error {
+  constructor(message, statusCode, isOperational = true) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = isOperational;
+    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+    
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
-// Custom error classes
-class ValidationError extends Error {
-  constructor(message, details) {
-    super(message);
-    this.name = 'ValidationError';
-    this.statusCode = 400;
+class ValidationError extends AppError {
+  constructor(message, details = null) {
+    super(message, 400, true);
     this.details = details;
+    this.name = 'ValidationError';
   }
 }
 
-class AuthenticationError extends Error {
+class AuthenticationError extends AppError {
   constructor(message = 'Authentication failed') {
-    super(message);
+    super(message, 401, true);
     this.name = 'AuthenticationError';
-    this.statusCode = 401;
   }
 }
 
-class AuthorizationError extends Error {
+class AuthorizationError extends AppError {
   constructor(message = 'Access denied') {
-    super(message);
+    super(message, 403, true);
     this.name = 'AuthorizationError';
-    this.statusCode = 403;
   }
 }
 
-class NotFoundError extends Error {
+class NotFoundError extends AppError {
   constructor(resource = 'Resource') {
-    super(`${resource} not found`);
+    super(`${resource} not found`, 404, true);
     this.name = 'NotFoundError';
-    this.statusCode = 404;
   }
 }
 
-class BlockchainError extends Error {
-  constructor(message, transactionId) {
-    super(message);
-    this.name = 'BlockchainError';
-    this.statusCode = 500;
-    this.transactionId = transactionId;
+class ConflictError extends AppError {
+  constructor(message = 'Resource conflict') {
+    super(message, 409, true);
+    this.name = 'ConflictError';
   }
 }
 
-// Error handling middleware
+class RateLimitError extends AppError {
+  constructor(message = 'Too many requests') {
+    super(message, 429, true);
+    this.name = 'RateLimitError';
+  }
+}
+
+// Error handler middleware
 const errorHandler = (err, req, res, next) => {
-  // Log the error
-  logger.error({
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    userId: req.user?.id || 'anonymous'
+  let error = { ...err };
+  error.message = err.message;
+
+  // Log error details
+  logger.error('Error occurred:', {
+    error: {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      statusCode: err.statusCode || 500
+    },
+    request: {
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      userId: req.user?.id || 'anonymous'
+    },
+    timestamp: new Date().toISOString()
   });
 
-  // Handle specific error types
+  // Mongoose validation error
   if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-      details: err.details,
-      type: 'validation_error'
-    });
+    const message = Object.values(err.errors).map(val => val.message).join(', ');
+    error = new ValidationError(message, err.errors);
   }
 
-  if (err.name === 'AuthenticationError') {
-    return res.status(401).json({
-      success: false,
-      message: err.message,
-      type: 'authentication_error'
-    });
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    const value = err.keyValue[field];
+    const message = `${field} with value '${value}' already exists`;
+    error = new ConflictError(message);
   }
 
-  if (err.name === 'AuthorizationError') {
-    return res.status(403).json({
-      success: false,
-      message: err.message,
-      type: 'authorization_error'
-    });
+  // Mongoose cast error (invalid ObjectId)
+  if (err.name === 'CastError') {
+    const message = `Invalid ${err.path}: ${err.value}`;
+    error = new ValidationError(message);
   }
 
-  if (err.name === 'NotFoundError') {
-    return res.status(404).json({
-      success: false,
-      message: err.message,
-      type: 'not_found_error'
-    });
-  }
-
-  if (err.name === 'BlockchainError') {
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-      transactionId: err.transactionId,
-      type: 'blockchain_error'
-    });
-  }
-
-  // Handle MongoDB errors
-  if (err.name === 'MongoError' || err.name === 'MongoServerError') {
-    if (err.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: 'Duplicate entry found',
-        type: 'duplicate_error'
-      });
-    }
-  }
-
-  // Handle JWT errors
+  // JWT errors
   if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid token',
-      type: 'jwt_error'
-    });
+    error = new AuthenticationError('Invalid token');
   }
 
   if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      success: false,
-      message: 'Token expired',
-      type: 'token_expired_error'
-    });
+    error = new AuthenticationError('Token expired');
   }
 
-  // Handle Algorand SDK errors
-  if (err.message && err.message.includes('Algorand')) {
-    return res.status(500).json({
-      success: false,
-      message: 'Blockchain operation failed',
-      type: 'algorand_error'
-    });
+  // Multer file upload errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    error = new ValidationError('File too large');
   }
 
-  // Default error response
-  const statusCode = err.statusCode || 500;
-  const message = process.env.NODE_ENV === 'production' 
-    ? 'Internal server error' 
-    : err.message;
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    error = new ValidationError('Too many files');
+  }
 
-  res.status(statusCode).json({
-    success: false,
-    message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
-  });
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    error = new ValidationError('Unexpected file field');
+  }
+
+  // Rate limiting errors
+  if (err.status === 429) {
+    error = new RateLimitError('Too many requests, please try again later');
+  }
+
+  // Socket.IO errors
+  if (err.type === 'TransportError') {
+    logger.warn('Socket.IO transport error:', err);
+    return next();
+  }
+
+  // Default error
+  const statusCode = error.statusCode || 500;
+  const message = error.message || 'Internal Server Error';
+
+  // Development error response
+  if (process.env.NODE_ENV === 'development') {
+    res.status(statusCode).json({
+      success: false,
+      error: {
+        message,
+        statusCode,
+        stack: err.stack,
+        details: error.details || null,
+        timestamp: new Date().toISOString(),
+        path: req.originalUrl,
+        method: req.method
+      }
+    });
+  } else {
+    // Production error response
+    res.status(statusCode).json({
+      success: false,
+      error: {
+        message: statusCode === 500 ? 'Internal Server Error' : message,
+        statusCode,
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
 };
 
-// Async error wrapper
+// 404 handler for undefined routes
+const notFoundHandler = (req, res, next) => {
+  const error = new NotFoundError(`Route ${req.originalUrl}`);
+  next(error);
+};
+
+// Async error wrapper for async route handlers
 const asyncHandler = (fn) => {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
 
-// Request logging middleware
-const requestLogger = (req, res, next) => {
-  const start = Date.now();
+// Error boundary for unhandled promise rejections
+const handleUnhandledRejection = (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
   
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logger.info({
-      method: req.method,
-      url: req.url,
-      status: res.statusCode,
-      duration,
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      userId: req.user?.id || 'anonymous'
-    });
-  });
-  
-  next();
+  // Close server gracefully
+  process.exit(1);
 };
 
-// 404 handler
-const notFoundHandler = (req, res) => {
-  throw new NotFoundError('Route');
+// Error boundary for uncaught exceptions
+const handleUncaughtException = (error) => {
+  logger.error('Uncaught Exception:', error);
+  
+  // Close server gracefully
+  process.exit(1);
+};
+
+// Graceful shutdown handler
+const gracefulShutdown = (signal) => {
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+  
+  // Close database connections
+  if (global.db) {
+    global.db.close(() => {
+      logger.info('Database connection closed.');
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+};
+
+// Set up error handlers
+const setupErrorHandlers = () => {
+  process.on('unhandledRejection', handleUnhandledRejection);
+  process.on('uncaughtException', handleUncaughtException);
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 };
 
 module.exports = {
   errorHandler,
-  asyncHandler,
-  requestLogger,
   notFoundHandler,
+  asyncHandler,
+  setupErrorHandlers,
+  AppError,
   ValidationError,
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
-  BlockchainError,
-  logger
+  ConflictError,
+  RateLimitError
 }; 
