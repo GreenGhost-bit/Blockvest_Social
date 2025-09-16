@@ -5,8 +5,9 @@ const userSchema = new mongoose.Schema({
   // Basic Information
   username: {
     type: String,
-    required: [true, 'Username is required'],
+    required: false,
     unique: true,
+    sparse: true,
     trim: true,
     minlength: [3, 'Username must be at least 3 characters long'],
     maxlength: [30, 'Username cannot exceed 30 characters'],
@@ -14,26 +15,27 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: false,
     unique: true,
+    sparse: true,
     lowercase: true,
     trim: true,
     match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: false,
     minlength: [8, 'Password must be at least 8 characters long']
   },
   full_name: {
     type: String,
-    required: [true, 'Full name is required'],
+    required: false,
     trim: true,
     maxlength: [100, 'Full name cannot exceed 100 characters']
   },
   
   // Blockchain Information
-  wallet_address: {
+  walletAddress: {
     type: String,
     required: [true, 'Wallet address is required'],
     unique: true,
@@ -52,7 +54,31 @@ const userSchema = new mongoose.Schema({
     required: false
   },
   
-  // Profile Information
+  // Profile Information - Updated to match frontend expectations
+  profile: {
+    name: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [100, 'Name cannot exceed 100 characters']
+    },
+    email: {
+      type: String,
+      default: '',
+      lowercase: true,
+      trim: true
+    },
+    location: {
+      type: String,
+      default: '',
+      maxlength: [100, 'Location cannot exceed 100 characters']
+    },
+    phone: {
+      type: String,
+      default: '',
+      match: [/^\+?[\d\s\-\(\)]+$/, 'Please provide a valid phone number']
+    }
+  },
   profile_picture: {
     type: String,
     default: null,
@@ -129,11 +155,11 @@ const userSchema = new mongoose.Schema({
   },
   
   // Reputation System
-  reputation_score: {
+  reputationScore: {
     type: Number,
     min: [0, 'Reputation score cannot be negative'],
-    max: [1000, 'Reputation score cannot exceed 1000'],
-    default: 100
+    max: [100, 'Reputation score cannot exceed 100'],
+    default: 50
   },
   reputation_level: {
     type: String,
@@ -157,7 +183,7 @@ const userSchema = new mongoose.Schema({
   }],
   
   // Enhanced Verification and Security
-  verified: {
+  isVerified: {
     type: Boolean,
     default: false
   },
@@ -245,12 +271,12 @@ const userSchema = new mongoose.Schema({
   },
   
   // Investment Statistics
-  total_invested: {
+  totalInvested: {
     type: Number,
     default: 0,
     min: [0, 'Total invested cannot be negative']
   },
-  total_borrowed: {
+  totalBorrowed: {
     type: Number,
     default: 0,
     min: [0, 'Total borrowed cannot be negative']
@@ -401,10 +427,10 @@ const userSchema = new mongoose.Schema({
 
 // Virtual for reputation level calculation
 userSchema.virtual('reputation_level_calculated').get(function() {
-  if (this.reputation_score >= 800) return 'diamond';
-  if (this.reputation_score >= 600) return 'platinum';
-  if (this.reputation_score >= 400) return 'gold';
-  if (this.reputation_score >= 200) return 'silver';
+  if (this.reputationScore >= 80) return 'diamond';
+  if (this.reputationScore >= 60) return 'platinum';
+  if (this.reputationScore >= 40) return 'gold';
+  if (this.reputationScore >= 20) return 'silver';
   return 'bronze';
 });
 
@@ -416,7 +442,7 @@ userSchema.virtual('success_rate').get(function() {
 
 // Virtual for total portfolio value
 userSchema.virtual('portfolio_value').get(function() {
-  return this.total_invested + this.total_borrowed;
+  return this.totalInvested + this.totalBorrowed;
 });
 
 // Pre-save middleware for password hashing
@@ -450,7 +476,7 @@ userSchema.methods.checkPassword = async function(candidatePassword) {
 
 // Instance method to update reputation
 userSchema.methods.updateReputation = function(scoreChange, reason) {
-  this.reputation_score = Math.max(0, Math.min(1000, this.reputation_score + scoreChange));
+  this.reputationScore = Math.max(0, Math.min(100, this.reputationScore + scoreChange));
   this.reputation_history.push({
     score_change: scoreChange,
     reason: reason,
@@ -501,22 +527,22 @@ userSchema.statics.findByReputationLevel = function(level) {
 // Static method to find top investors
 userSchema.statics.findTopInvestors = function(limit = 10) {
   return this.find()
-    .sort({ total_invested: -1, reputation_score: -1 })
+    .sort({ totalInvested: -1, reputationScore: -1 })
     .limit(limit);
 };
 
 // Static method to find verified users
 userSchema.statics.findVerifiedUsers = function() {
-  return this.find({ verified: true, verification_status: 'verified' });
+  return this.find({ isVerified: true, verification_status: 'verified' });
 };
 
 // Indexes for better query performance
 userSchema.index({ username: 1 });
 userSchema.index({ email: 1 });
-userSchema.index({ wallet_address: 1 });
-userSchema.index({ reputation_score: -1 });
+userSchema.index({ walletAddress: 1 });
+userSchema.index({ reputationScore: -1 });
 userSchema.index({ risk_score: 1 });
-userSchema.index({ verified: 1 });
+userSchema.index({ isVerified: 1 });
 userSchema.index({ created_at: -1 });
 userSchema.index({ last_active: -1 });
 
@@ -572,7 +598,7 @@ userSchema.methods.calculateSocialScore = function() {
   const connectionBonus = this.connections.reduce((sum, conn) => sum + conn.strength, 0);
   const activityBonus = this.login_count * 0.1;
   
-  return Math.min(1000, this.reputation_score + followerBonus + connectionBonus + activityBonus);
+  return Math.min(100, this.reputationScore + followerBonus + connectionBonus + activityBonus);
 };
 
 // Instance method to update preferences
