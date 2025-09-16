@@ -192,7 +192,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             fetchTransactions()
           ]);
         } else {
-          throw new Error('Authentication failed');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Authentication failed');
         }
       } else {
         throw new Error('No Algorand wallet found. Please install Pera Wallet or similar.');
@@ -203,10 +204,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setIsConnected(false);
       setWalletAddress(null);
       setConnectionStatus('error');
+      console.error('Wallet connection error:', err);
     } finally {
       setLoading(false);
     }
-  }, [networkConfig]);
+  }, [networkConfig, fetchBalance, fetchAssets, fetchTransactions]);
 
   const disconnectWallet = useCallback(() => {
     setIsConnected(false);
@@ -465,6 +467,55 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   }, [fetchBalance, fetchAssets, fetchTransactions]);
 
+  // Add mock wallet for development
+  const connectMockWallet = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setConnectionStatus('connecting');
+
+      // Create a mock wallet address for development
+      const mockAddress = 'MOCK' + Math.random().toString(36).substr(2, 9);
+      
+      setWalletAddress(mockAddress);
+      setIsConnected(true);
+      setConnectionStatus('connected');
+      
+      // Create mock user data
+      const mockUser = {
+        id: 'mock-user-id',
+        walletAddress: mockAddress,
+        profile: {
+          name: 'Mock User',
+          email: 'mock@example.com',
+          location: 'Test Location',
+          phone: '+1234567890'
+        },
+        reputationScore: 75,
+        isVerified: true
+      };
+      
+      setUser(mockUser);
+      setBalance(1000); // Mock balance
+      setAssets([]);
+      setTransactions([]);
+      
+      // Store mock token
+      localStorage.setItem('token', 'mock-token-' + Date.now());
+      localStorage.setItem('network', networkConfig.name.toLowerCase());
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect mock wallet';
+      setError(errorMessage);
+      setIsConnected(false);
+      setWalletAddress(null);
+      setConnectionStatus('error');
+      console.error('Mock wallet connection error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [networkConfig]);
+
   const value: WalletContextType = {
     isConnected,
     walletAddress,
@@ -474,7 +525,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     transactions,
     pendingTransactions,
     networkConfig,
-    connectWallet,
+    connectWallet: typeof window !== 'undefined' && 'algorand' in window ? connectWallet : connectMockWallet,
     disconnectWallet,
     signTransaction,
     signTransactions,
