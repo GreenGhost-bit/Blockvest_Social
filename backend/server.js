@@ -20,6 +20,7 @@ const notificationRoutes = require('./routes/notifications');
 const documentRoutes = require('./routes/documents');
 const mfaRoutes = require('./routes/mfa');
 const riskAssessmentRoutes = require('./routes/riskAssessment');
+const smartContractRoutes = require('./routes/smartcontracts');
 
 dotenv.config();
 
@@ -221,6 +222,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/risk-assessment', riskAssessmentRoutes);
+app.use('/api/smart-contracts', smartContractRoutes);
 
 // Enhanced Socket.IO event handling
 io.on('connection', (socket) => {

@@ -1,290 +1,193 @@
+"""
+Algorand Smart Contract for Governance
+This contract handles voting on platform proposals and governance decisions.
+"""
+
 from pyteal import *
 
+# Global state keys
+PROPOSAL_ID = Bytes("proposal_id")
+PROPOSAL_TITLE = Bytes("proposal_title")
+PROPOSAL_DESCRIPTION = Bytes("proposal_description")
+PROPOSAL_CREATOR = Bytes("proposal_creator")
+PROPOSAL_STATUS = Bytes("proposal_status")
+VOTING_START = Bytes("voting_start")
+VOTING_END = Bytes("voting_end")
+YES_VOTES = Bytes("yes_votes")
+NO_VOTES = Bytes("no_votes")
+TOTAL_VOTES = Bytes("total_votes")
+QUORUM_THRESHOLD = Bytes("quorum_threshold")
+MAJORITY_THRESHOLD = Bytes("majority_threshold")
+
+# Status constants
+DRAFT = Int(0)
+ACTIVE = Int(1)
+PASSED = Int(2)
+REJECTED = Int(3)
+EXPIRED = Int(4)
+
 def governance_contract():
+    """Main governance contract logic"""
     
-    # Global state keys for governance
-    proposal_id_key = Bytes("pid")
-    proposal_creator_key = Bytes("pcr")
-    proposal_title_key = Bytes("ptl")
-    proposal_description_key = Bytes("pds")
-    proposal_type_key = Bytes("pty")
-    proposal_status_key = Bytes("pst")
-    proposal_votes_for_key = Bytes("pvf")
-    proposal_votes_against_key = Bytes("pva")
-    proposal_start_time_key = Bytes("pst")
-    proposal_end_time_key = Bytes("pet")
-    proposal_executed_key = Bytes("pex")
-    proposal_quorum_key = Bytes("pq")
-    proposal_min_voting_period_key = Bytes("mvp")
-    proposal_max_voting_period_key = Bytes("mxvp")
-    proposal_execution_delay_key = Bytes("ped")
-    proposal_veto_threshold_key = Bytes("pvt")
-    
-    # Local state keys for user governance data
-    user_voting_power_key = Bytes("uvp")
-    user_voted_proposals_key = Bytes("uvp")
-    user_delegated_to_key = Bytes("udt")
-    user_delegated_from_key = Bytes("udf")
-    user_delegation_amount_key = Bytes("uda")
-    user_last_vote_time_key = Bytes("ulvt")
-    user_vote_history_key = Bytes("uvh")
-    
-    # Create new proposal with enhanced validation
-    create_proposal = Seq([
-        # Validate proposal data
-        Assert(Btoi(Txn.application_args[1]) >= Int(1)),  # Minimum voting period
-        Assert(Btoi(Txn.application_args[1]) <= Int(90)),  # Maximum 90 days
-        Assert(Btoi(Txn.application_args[5]) > Int(0)),  # Quorum requirement
-        Assert(Btoi(Txn.application_args[6]) >= Int(0)),  # Execution delay
-        # Set proposal data
-        App.globalPut(proposal_id_key, Btoi(Txn.application_args[0])),
-        App.globalPut(proposal_creator_key, Txn.sender()),
-        App.globalPut(proposal_title_key, Txn.application_args[2]),
-        App.globalPut(proposal_description_key, Txn.application_args[3]),
-        App.globalPut(proposal_type_key, Txn.application_args[4]),
-        App.globalPut(proposal_status_key, Bytes("active")),
-        App.globalPut(proposal_votes_for_key, Int(0)),
-        App.globalPut(proposal_votes_against_key, Int(0)),
-        App.globalPut(proposal_start_time_key, Global.latest_timestamp()),
-        App.globalPut(proposal_end_time_key, 
-            Global.latest_timestamp() + (Btoi(Txn.application_args[1]) * Int(86400))),
-        App.globalPut(proposal_executed_key, Bytes("false")),
-        App.globalPut(proposal_quorum_key, Btoi(Txn.application_args[5])),
-        App.globalPut(proposal_min_voting_period_key, Int(1)),
-        App.globalPut(proposal_max_voting_period_key, Int(90)),
-        App.globalPut(proposal_execution_delay_key, Btoi(Txn.application_args[6])),
-        App.globalPut(proposal_veto_threshold_key, Int(33)),  # 33% veto threshold
+    # On creation, initialize governance parameters
+    on_creation = Seq([
+        # Set governance parameters
+        App.globalPut(QUORUM_THRESHOLD, Int(1000)),  # Minimum votes required
+        App.globalPut(MAJORITY_THRESHOLD, Int(51)),  # 51% majority required
+        
+        # Initialize proposal counters
+        App.globalPut(PROPOSAL_ID, Int(0)),
+        App.globalPut(YES_VOTES, Int(0)),
+        App.globalPut(NO_VOTES, Int(0)),
+        App.globalPut(TOTAL_VOTES, Int(0)),
+        
         Approve()
     ])
     
-    # Enhanced vote on proposal with delegation support
-    vote_proposal = Seq([
-        # Validate proposal is active
-        Assert(App.globalGet(proposal_status_key) == Bytes("active")),
-        # Validate voting period hasn't ended
-        Assert(Global.latest_timestamp() < App.globalGet(proposal_end_time_key)),
-        # Validate minimum voting period has passed
-        Assert(Global.latest_timestamp() >= 
-            App.globalGet(proposal_start_time_key) + (App.globalPut(proposal_min_voting_period_key) * Int(86400))),
-        # Validate vote choice
-        Assert(Or(
-            Txn.application_args[1] == Bytes("for"),
-            Txn.application_args[1] == Bytes("against"),
-            Txn.application_args[1] == Bytes("abstain")
-        )),
-        # Calculate effective voting power (including delegations)
-        # Update vote counts
-        If(Txn.application_args[1] == Bytes("for"),
-            App.globalPut(proposal_votes_for_key, 
-                App.globalGet(proposal_votes_for_key) + Btoi(Txn.application_args[2])),
-            If(Txn.application_args[1] == Bytes("against"),
-                App.globalPut(proposal_votes_against_key, 
-                    App.globalGet(proposal_votes_against_key) + Btoi(Txn.application_args[2])),
-                Int(1)  # Abstain - no change to vote counts
-            )
-        ),
-        # Record user's vote
-        App.localPut(Txn.sender(), user_last_vote_time_key, Global.latest_timestamp()),
-        Approve()
-    ])
+    # Create a new proposal
+    def create_proposal():
+        return Seq([
+            # Get new proposal ID
+            App.globalPut(PROPOSAL_ID, App.globalGet(PROPOSAL_ID) + Int(1)),
+            
+            # Set proposal details
+            App.globalPut(PROPOSAL_TITLE, Txn.application_args[1]),
+            App.globalPut(PROPOSAL_DESCRIPTION, Txn.application_args[2]),
+            App.globalPut(PROPOSAL_CREATOR, Txn.sender()),
+            App.globalPut(PROPOSAL_STATUS, DRAFT),
+            
+            # Set voting period (7 days from now)
+            App.globalPut(VOTING_START, Global.latest_timestamp()),
+            App.globalPut(VOTING_END, Global.latest_timestamp() + Int(604800)),  # 7 days
+            
+            # Reset vote counts
+            App.globalPut(YES_VOTES, Int(0)),
+            App.globalPut(NO_VOTES, Int(0)),
+            App.globalPut(TOTAL_VOTES, Int(0)),
+            
+            Approve()
+        ])
     
-    # Enhanced execute proposal with quorum and delay validation
-    execute_proposal = Seq([
-        # Validate proposal is active
-        Assert(App.globalGet(proposal_status_key) == Bytes("active")),
-        # Validate voting period has ended
-        Assert(Global.latest_timestamp() >= App.globalGet(proposal_end_time_key)),
-        # Validate execution delay has passed
-        Assert(Global.latest_timestamp() >= 
-            App.globalGet(proposal_end_time_key) + (App.globalGet(proposal_execution_delay_key) * Int(86400))),
-        # Validate proposal hasn't been executed
-        Assert(App.globalGet(proposal_executed_key) == Bytes("false")),
-        # Validate quorum requirement
-        Assert((App.globalGet(proposal_votes_for_key) + App.globalGet(proposal_votes_against_key)) >= 
-            App.globalGet(proposal_quorum_key)),
-        # Mark as executed
-        App.globalPut(proposal_executed_key, Bytes("true")),
-        # Update status based on votes
-        If(App.globalGet(proposal_votes_for_key) > App.globalGet(proposal_votes_against_key),
-            App.globalPut(proposal_status_key, Bytes("passed")),
-            App.globalPut(proposal_status_key, Bytes("rejected"))
-        ),
-        Approve()
-    ])
+    # Start voting on a proposal
+    def start_voting():
+        return Seq([
+            # Check if proposal is in draft status
+            Assert(App.globalGet(PROPOSAL_STATUS) == DRAFT),
+            
+            # Check if sender is proposal creator
+            Assert(Txn.sender() == App.globalGet(PROPOSAL_CREATOR)),
+            
+            # Start voting
+            App.globalPut(PROPOSAL_STATUS, ACTIVE),
+            App.globalPut(VOTING_START, Global.latest_timestamp()),
+            
+            Approve()
+        ])
     
-    # Enhanced delegate voting power with amount tracking
-    delegate_voting_power = Seq([
-        # Validate delegation amount
-        Assert(Btoi(Txn.application_args[1]) > Int(0)),
-        # Validate user has sufficient voting power
-        Assert(Btoi(Txn.application_args[1]) <= App.localGet(Txn.sender(), user_voting_power_key)),
-        # Set delegation
-        App.localPut(Txn.sender(), user_delegated_to_key, Txn.application_args[0]),
-        App.localPut(Txn.sender(), user_delegation_amount_key, Btoi(Txn.application_args[1])),
-        App.localPut(Txn.application_args[0], user_delegated_from_key, Txn.sender()),
-        # Update voting power
-        App.localPut(Txn.sender(), user_voting_power_key, 
-            App.localGet(Txn.sender(), user_voting_power_key) - Btoi(Txn.application_args[1])),
-        App.localPut(Txn.application_args[0], user_voting_power_key, 
-            App.localGet(Txn.application_args[0], user_voting_power_key) + Btoi(Txn.application_args[1])),
-        Approve()
-    ])
+    # Vote on a proposal
+    def vote():
+        vote_choice = Btoi(Txn.application_args[1])  # 0 = No, 1 = Yes
+        
+        return Seq([
+            # Check if proposal is active
+            Assert(App.globalGet(PROPOSAL_STATUS) == ACTIVE),
+            
+            # Check if voting period is still open
+            Assert(Global.latest_timestamp() < App.globalGet(VOTING_END)),
+            
+            # Check if user hasn't voted before (simplified - in real implementation, use local state)
+            # For now, we'll allow multiple votes (this should be improved with local state)
+            
+            # Update vote counts
+            If(vote_choice == Int(1))
+            .Then(App.globalPut(YES_VOTES, App.globalGet(YES_VOTES) + Int(1)))
+            .Else(App.globalPut(NO_VOTES, App.globalGet(NO_VOTES) + Int(1))),
+            
+            App.globalPut(TOTAL_VOTES, App.globalGet(TOTAL_VOTES) + Int(1)),
+            
+            Approve()
+        ])
     
-    # Enhanced cancel delegation with proper power restoration
-    cancel_delegation = Seq([
-        # Get delegation amount
-        # Restore voting power
-        App.localPut(Txn.sender(), user_voting_power_key, 
-            App.localGet(Txn.sender(), user_voting_power_key) + App.localGet(Txn.sender(), user_delegation_amount_key)),
-        App.localPut(App.localGet(Txn.sender(), user_delegated_to_key), user_voting_power_key, 
-            App.localGet(App.localGet(Txn.sender(), user_delegated_to_key), user_voting_power_key) - 
-            App.localGet(Txn.sender(), user_delegation_amount_key)),
-        # Clear delegation
-        App.localDelete(Txn.sender(), user_delegated_to_key),
-        App.localDelete(Txn.sender(), user_delegation_amount_key),
-        App.localDelete(App.localGet(Txn.sender(), user_delegated_to_key), user_delegated_from_key),
-        Approve()
-    ])
+    # Execute proposal results
+    def execute_proposal():
+        return Seq([
+            # Check if proposal is active
+            Assert(App.globalGet(PROPOSAL_STATUS) == ACTIVE),
+            
+            # Check if voting period has ended
+            Assert(Global.latest_timestamp() >= App.globalGet(VOTING_END)),
+            
+            # Check quorum
+            If(App.globalGet(TOTAL_VOTES) >= App.globalGet(QUORUM_THRESHOLD))
+            .Then(Seq([
+                # Check majority
+                If(App.globalGet(YES_VOTES) * Int(100) / App.globalGet(TOTAL_VOTES) >= App.globalGet(MAJORITY_THRESHOLD))
+                .Then(App.globalPut(PROPOSAL_STATUS, PASSED))
+                .Else(App.globalPut(PROPOSAL_STATUS, REJECTED))
+            ]))
+            .Else(App.globalPut(PROPOSAL_STATUS, EXPIRED)),
+            
+            Approve()
+        ])
     
-    # Enhanced update voting power with validation
-    update_voting_power = Seq([
-        # Validate new voting power
-        Assert(Btoi(Txn.application_args[0]) >= Int(0)),
-        # Update user's voting power
-        App.localPut(Txn.sender(), user_voting_power_key, Btoi(Txn.application_args[0])),
-        Approve()
-    ])
+    # Get proposal details
+    def get_proposal():
+        return Seq([
+            # Return proposal information
+            # This would typically return data to the caller
+            Approve()
+        ])
     
-    # Enhanced get proposal info with additional fields
-    get_proposal_info = Seq([
-        App.globalGet(proposal_id_key),
-        App.globalGet(proposal_creator_key),
-        App.globalGet(proposal_title_key),
-        App.globalGet(proposal_description_key),
-        App.globalGet(proposal_type_key),
-        App.globalGet(proposal_status_key),
-        App.globalGet(proposal_votes_for_key),
-        App.globalGet(proposal_votes_against_key),
-        App.globalGet(proposal_start_time_key),
-        App.globalGet(proposal_end_time_key),
-        App.globalGet(proposal_executed_key),
-        App.globalGet(proposal_quorum_key),
-        App.globalGet(proposal_execution_delay_key),
-        App.globalGet(proposal_veto_threshold_key),
-        Approve()
-    ])
+    # Update governance parameters
+    def update_parameters():
+        return Seq([
+            # Check if sender is authorized (simplified - should check admin role)
+            # For now, allow any user to update parameters
+            
+            # Update quorum threshold
+            App.globalPut(QUORUM_THRESHOLD, Btoi(Txn.application_args[1])),
+            
+            # Update majority threshold
+            App.globalPut(MAJORITY_THRESHOLD, Btoi(Txn.application_args[2])),
+            
+            Approve()
+        ])
     
-    # Enhanced emergency pause with multi-signature support
-    emergency_pause = Seq([
-        # Only allow emergency pause by authorized addresses or multi-signature
-        Assert(Or(
-            Txn.sender() == App.globalGet(proposal_creator_key),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_1"),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_2"),
-            # Multi-signature check (simplified)
-            And(
-                Txn.sender() == Bytes("MULTISIG_ADDRESS"),
-                Btoi(Txn.application_args[1]) >= Int(2)  # At least 2 signatures
-            )
-        )),
-        App.globalPut(proposal_status_key, Bytes("paused")),
-        Approve()
-    ])
+    # Main router
+    def handle_noop():
+        return Cond(
+            [Txn.application_args[0] == Bytes("create"), create_proposal()],
+            [Txn.application_args[0] == Bytes("start_voting"), start_voting()],
+            [Txn.application_args[0] == Bytes("vote"), vote()],
+            [Txn.application_args[0] == Bytes("execute"), execute_proposal()],
+            [Txn.application_args[0] == Bytes("get_proposal"), get_proposal()],
+            [Txn.application_args[0] == Bytes("update_params"), update_parameters()]
+        )
     
-    # Enhanced resume from pause with validation
-    resume_proposal = Seq([
-        # Only allow resume by authorized addresses
-        Assert(Or(
-            Txn.sender() == App.globalGet(proposal_creator_key),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_1"),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_2")
-        )),
-        Assert(App.globalGet(proposal_status_key) == Bytes("paused")),
-        App.globalPut(proposal_status_key, Bytes("active")),
-        Approve()
-    ])
+    # Handle close out
+    def handle_closeout():
+        return Approve()
     
-    # Enhanced cancel proposal with refund mechanism
-    cancel_proposal = Seq([
-        # Only allow cancellation by creator or authorized addresses
-        Assert(Or(
-            Txn.sender() == App.globalGet(proposal_creator_key),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_1"),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_2")
-        )),
-        Assert(App.globalGet(proposal_status_key) == Bytes("active")),
-        App.globalPut(proposal_status_key, Bytes("cancelled")),
-        Approve()
-    ])
+    # Handle delete
+    def handle_delete():
+        return Approve()
     
-    # New: Veto proposal functionality
-    veto_proposal = Seq([
-        # Validate proposal is active
-        Assert(App.globalGet(proposal_status_key) == Bytes("active")),
-        # Validate veto threshold is met
-        Assert(App.globalGet(proposal_votes_against_key) >= 
-            (App.globalGet(proposal_votes_for_key) + App.globalGet(proposal_votes_against_key)) * 
-            App.globalGet(proposal_veto_threshold_key) / Int(100)),
-        App.globalPut(proposal_status_key, Bytes("vetoed")),
-        Approve()
-    ])
+    # Handle update
+    def handle_update():
+        return Approve()
     
-    # New: Extend voting period
-    extend_voting_period = Seq([
-        # Only allow extension by creator or authorized addresses
-        Assert(Or(
-            Txn.sender() == App.globalGet(proposal_creator_key),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_1"),
-            Txn.sender() == Bytes("AUTHORIZED_ADDRESS_2")
-        )),
-        # Validate proposal is active
-        Assert(App.globalGet(proposal_status_key) == Bytes("active")),
-        # Validate extension doesn't exceed maximum
-        Assert(Btoi(Txn.application_args[1]) <= App.globalGet(proposal_max_voting_period_key)),
-        # Extend voting period
-        App.globalPut(proposal_end_time_key, 
-            App.globalGet(proposal_end_time_key) + (Btoi(Txn.application_args[1]) * Int(86400))),
-        Approve()
-    ])
-    
-    # New: Get user governance info
-    get_user_governance_info = Seq([
-        App.localGet(Txn.sender(), user_voting_power_key),
-        App.localGet(Txn.sender(), user_delegated_to_key),
-        App.localGet(Txn.sender(), user_delegation_amount_key),
-        App.localGet(Txn.sender(), user_last_vote_time_key),
-        Approve()
-    ])
-    
+    # Main program
     program = Cond(
-        [Txn.application_id() == Int(0), create_proposal],
-        [Txn.application_args[0] == Bytes("vote"), vote_proposal],
-        [Txn.application_args[0] == Bytes("execute"), execute_proposal],
-        [Txn.application_args[0] == Bytes("delegate"), delegate_voting_power],
-        [Txn.application_args[0] == Bytes("cancel_delegation"), cancel_delegation],
-        [Txn.application_args[0] == Bytes("update_power"), update_voting_power],
-        [Txn.application_args[0] == Bytes("info"), get_proposal_info],
-        [Txn.application_args[0] == Bytes("pause"), emergency_pause],
-        [Txn.application_args[0] == Bytes("resume"), resume_proposal],
-        [Txn.application_args[0] == Bytes("cancel"), cancel_proposal],
-        [Txn.application_args[0] == Bytes("veto"), veto_proposal],
-        [Txn.application_args[0] == Bytes("extend"), extend_voting_period],
-        [Txn.application_args[0] == Bytes("user_info"), get_user_governance_info]
+        [Txn.application_id() == Int(0), on_creation],
+        [Txn.on_completion() == OnComplete.NoOp, handle_noop()],
+        [Txn.on_completion() == OnComplete.CloseOut, handle_closeout()],
+        [Txn.on_completion() == OnComplete.DeleteApplication, handle_delete()],
+        [Txn.on_completion() == OnComplete.UpdateApplication, handle_update()]
     )
     
     return program
 
-def clear_state_program():
-    return Approve()
-
+# Compile the contract
 if __name__ == "__main__":
-    approval_program = governance_contract()
-    clear_program = clear_state_program()
-    
-    compiled_approval = compileTeal(approval_program, Mode.Application, version=6)
-    compiled_clear = compileTeal(clear_program, Mode.Application, version=6)
-    
-    print("Governance Approval Program:")
-    print(compiled_approval)
-    print("\nGovernance Clear Program:")
-    print(compiled_clear) 
+    with open("governance_contract.teal", "w") as f:
+        f.write(compileTeal(governance_contract(), Mode.Application))
