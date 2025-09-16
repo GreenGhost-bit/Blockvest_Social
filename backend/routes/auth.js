@@ -33,7 +33,9 @@ router.post('/connect-wallet', async (req, res) => {
           email: '',
           location: '',
           phone: ''
-        }
+        },
+        reputationScore: 50,
+        isVerified: false
       });
       await user.save();
     }
