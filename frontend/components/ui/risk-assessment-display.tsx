@@ -38,6 +38,20 @@ const RiskAssessmentDisplay: React.FC<RiskAssessmentDisplayProps> = ({
       setLoading(true);
       setError(null);
       
+      // Check cache first
+      const cacheKey = `risk_assessment_${investmentId}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 10 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 600000) {
+        const cachedAssessment = JSON.parse(cachedData);
+        setRiskAssessment(cachedAssessment);
+        setLoading(false);
+        return;
+      }
+      
       // Mock data for now - replace with actual API call
       const mockAssessment: RiskAssessment = {
         overallScore: 65,
@@ -83,7 +97,32 @@ const RiskAssessmentDisplay: React.FC<RiskAssessmentDisplayProps> = ({
         lastUpdated: new Date().toISOString()
       };
       
-      setRiskAssessment(mockAssessment);
+      // Validate and sanitize data
+      const validatedAssessment = {
+        ...mockAssessment,
+        overallScore: Math.max(0, Math.min(100, mockAssessment.overallScore)),
+        riskLevel: ['low', 'medium', 'high'].includes(mockAssessment.riskLevel) 
+          ? mockAssessment.riskLevel 
+          : 'medium' as 'low' | 'medium' | 'high',
+        factors: mockAssessment.factors.map(factor => ({
+          ...factor,
+          score: Math.max(0, Math.min(100, factor.score)),
+          weight: Math.max(0, Math.min(1, factor.weight)),
+          name: factor.name.trim(),
+          description: factor.description.trim()
+        })),
+        recommendations: mockAssessment.recommendations
+          .filter(rec => rec && rec.trim().length > 0)
+          .map(rec => rec.trim()),
+        lastUpdated: mockAssessment.lastUpdated
+      };
+      
+      setRiskAssessment(validatedAssessment);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify(validatedAssessment));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (err) {
       setError('Failed to load risk assessment');
       console.error('Risk assessment error:', err);
@@ -123,12 +162,17 @@ const RiskAssessmentDisplay: React.FC<RiskAssessmentDisplayProps> = ({
   if (error) {
     return (
       <div className="text-center p-8">
-        <div className="text-red-600 mb-2">{error}</div>
+        <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <div className="text-red-600 mb-4 font-medium">{error}</div>
         <button 
           onClick={fetchRiskAssessment}
-          className="text-blue-600 hover:text-blue-800"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 mx-auto"
         >
-          Try again
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Try Again
         </button>
       </div>
     );
@@ -144,6 +188,21 @@ const RiskAssessmentDisplay: React.FC<RiskAssessmentDisplayProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Header with refresh button */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-900">Risk Assessment</h3>
+        <button
+          onClick={fetchRiskAssessment}
+          disabled={loading}
+          className="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+
       {/* Overall Risk Score */}
       <div className="text-center">
         <div className="inline-flex items-center space-x-4">
