@@ -1,19 +1,61 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const AboutPage: React.FC = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalInvestments: 0,
+    totalVolume: 0,
+    successRate: 0
+  });
+
+  useEffect(() => {
+    // Animate stats on load
+    const animateStats = () => {
+      setStats({
+        totalUsers: 1250,
+        totalInvestments: 3400,
+        totalVolume: 2500000,
+        successRate: 94
+      });
+    };
+
+    const timer = setTimeout(animateStats, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl font-bold text-gray-900 mb-6">About Blockvest Social</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
             A decentralized social investment platform built on Algorand blockchain, 
             enabling peer-to-peer lending and investment opportunities for individuals 
             without formal credit history.
           </p>
+          
+          {/* Stats Section */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalUsers.toLocaleString()}</div>
+              <div className="text-sm text-gray-600">Active Users</div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="text-3xl font-bold text-green-600 mb-2">{stats.totalInvestments.toLocaleString()}</div>
+              <div className="text-sm text-gray-600">Total Investments</div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="text-3xl font-bold text-purple-600 mb-2">${(stats.totalVolume / 1000000).toFixed(1)}M</div>
+              <div className="text-sm text-gray-600">Volume Transacted</div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="text-3xl font-bold text-orange-600 mb-2">{stats.successRate}%</div>
+              <div className="text-sm text-gray-600">Success Rate</div>
+            </div>
+          </div>
         </div>
 
         {/* Mission Section */}
@@ -226,6 +268,24 @@ const AboutPage: React.FC = () => {
               <p className="text-gray-600 text-sm">
                 Product strategist focused on user experience and financial inclusion
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Call to Action Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-md p-8 mb-12 text-white">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
+            <p className="text-xl mb-8 opacity-90">
+              Join thousands of users who are already building their financial future with Blockvest Social
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                Start Investing
+              </button>
+              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+                Learn More
+              </button>
             </div>
           </div>
         </div>
