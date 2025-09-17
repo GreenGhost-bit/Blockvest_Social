@@ -1,128 +1,313 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import * as ToastPrimitives from "@radix-ui/react-toast"
-import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
-import { cn } from "@/frontend/lib/utils"
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
-const ToastProvider = ToastPrimitives.Provider
-
-const ToastViewport = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Viewport>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Viewport
-    ref={ref}
-    className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
-      className
-    )}
-    {...props}
-  />
-))
-ToastViewport.displayName = ToastPrimitives.Viewport.displayName
-
-const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
-  {
-    variants: {
-      variant: {
-        default: "border bg-background text-foreground",
-        destructive:
-          "destructive border-destructive bg-destructive text-destructive-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-const Toast = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => {
-  return (
-    <ToastPrimitives.Root
-      ref={ref}
-      className={cn(toastVariants({ variant }), className)}
-      {...props}
-    />
-  )
-})
-Toast.displayName = ToastPrimitives.Root.displayName
-
-const ToastAction = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Action>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Action
-    ref={ref}
-    className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
-      className
-    )}
-    {...props}
-  />
-))
-ToastAction.displayName = ToastPrimitives.Action.displayName
-
-const ToastClose = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Close>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Close>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Close
-    ref={ref}
-    className={cn(
-      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
-      className
-    )}
-    toast-close=""
-    {...props}
-  >
-    <X className="h-4 w-4" />
-  </ToastPrimitives.Close>
-))
-ToastClose.displayName = ToastPrimitives.Close.displayName
-
-const ToastTitle = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Title>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Title
-    ref={ref}
-    className={cn("text-sm font-semibold [&+div]:text-xs", className)}
-    {...props}
-  />
-))
-ToastTitle.displayName = ToastPrimitives.Title.displayName
-
-const ToastDescription = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Description>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Description
-    ref={ref}
-    className={cn("text-sm opacity-90", className)}
-    {...props}
-  />
-))
-ToastDescription.displayName = ToastPrimitives.Description.displayName
-
-type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
-
-type ToastActionElement = React.ReactElement<typeof ToastAction>
-
-export {
-  type ToastProps,
-  type ToastActionElement,
-  ToastProvider,
-  ToastViewport,
-  Toast,
-  ToastTitle,
-  ToastDescription,
-  ToastClose,
-  ToastAction,
+interface Toast {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message?: string;
+  duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 }
+
+interface ToastContextType {
+  toasts: Toast[];
+  addToast: (toast: Omit<Toast, 'id'>) => void;
+  removeToast: (id: string) => void;
+  clearToasts: () => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+export const useToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
+};
+
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newToast: Toast = {
+      id,
+      duration: 5000,
+      position: 'top-right',
+      ...toast
+    };
+
+    setToasts(prev => [...prev, newToast]);
+
+    // Auto remove toast after duration
+    if (newToast.duration && newToast.duration > 0) {
+      setTimeout(() => {
+        removeToast(id);
+      }, newToast.duration);
+    }
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  const clearToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
+
+  const value = {
+    toasts,
+    addToast,
+    removeToast,
+    clearToasts
+  };
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+      {mounted && <ToastContainer toasts={toasts} onRemove={removeToast} />}
+    </ToastContext.Provider>
+  );
+};
+
+const ToastContainer: React.FC<{
+  toasts: Toast[];
+  onRemove: (id: string) => void;
+}> = ({ toasts, onRemove }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!mounted) return null;
+
+  // Group toasts by position
+  const toastsByPosition = toasts.reduce((acc, toast) => {
+    const position = toast.position || 'top-right';
+    if (!acc[position]) {
+      acc[position] = [];
+    }
+    acc[position].push(toast);
+    return acc;
+  }, {} as Record<string, Toast[]>);
+
+  return createPortal(
+    <div className="fixed inset-0 pointer-events-none z-50">
+      {Object.entries(toastsByPosition).map(([position, positionToasts]) => (
+        <div
+          key={position}
+          className={`absolute ${getPositionClasses(position)}`}
+        >
+          <div className="space-y-2">
+            {positionToasts.map(toast => (
+              <ToastItem
+                key={toast.id}
+                toast={toast}
+                onRemove={onRemove}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+};
+
+const ToastItem: React.FC<{
+  toast: Toast;
+  onRemove: (id: string) => void;
+}> = ({ toast, onRemove }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  useEffect(() => {
+    // Trigger entrance animation
+    const timer = setTimeout(() => setIsVisible(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleRemove = () => {
+    setIsLeaving(true);
+    setTimeout(() => onRemove(toast.id), 300);
+  };
+
+  const getToastClasses = () => {
+    const baseClasses = 'pointer-events-auto max-w-sm w-full bg-white shadow-lg rounded-lg border-l-4 p-4 transform transition-all duration-300 ease-in-out';
+    const visibilityClasses = isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0';
+    
+    const typeClasses = {
+      success: 'border-green-500',
+      error: 'border-red-500',
+      warning: 'border-yellow-500',
+      info: 'border-blue-500'
+    };
+
+    return `${baseClasses} ${visibilityClasses} ${typeClasses[toast.type]}`;
+  };
+
+  const getIcon = () => {
+    const iconClasses = {
+      success: 'text-green-500',
+      error: 'text-red-500',
+      warning: 'text-yellow-500',
+      info: 'text-blue-500'
+    };
+
+    switch (toast.type) {
+      case 'success':
+        return (
+          <svg className={`h-5 w-5 ${iconClasses[toast.type]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        );
+      case 'error':
+        return (
+          <svg className={`h-5 w-5 ${iconClasses[toast.type]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        );
+      case 'warning':
+        return (
+          <svg className={`h-5 w-5 ${iconClasses[toast.type]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        );
+      case 'info':
+        return (
+          <svg className={`h-5 w-5 ${iconClasses[toast.type]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className={getToastClasses()}>
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          {getIcon()}
+        </div>
+        <div className="ml-3 w-0 flex-1">
+          <p className="text-sm font-medium text-gray-900">
+            {toast.title}
+          </p>
+          {toast.message && (
+            <p className="mt-1 text-sm text-gray-500">
+              {toast.message}
+            </p>
+          )}
+          {toast.action && (
+            <div className="mt-2">
+              <button
+                onClick={toast.action.onClick}
+                className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
+              >
+                {toast.action.label}
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="ml-4 flex-shrink-0 flex">
+          <button
+            onClick={handleRemove}
+            className="inline-flex text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          >
+            <span className="sr-only">Close</span>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const getPositionClasses = (position: string): string => {
+  switch (position) {
+    case 'top-right':
+      return 'top-4 right-4';
+    case 'top-left':
+      return 'top-4 left-4';
+    case 'bottom-right':
+      return 'bottom-4 right-4';
+    case 'bottom-left':
+      return 'bottom-4 left-4';
+    case 'top-center':
+      return 'top-4 left-1/2 transform -translate-x-1/2';
+    case 'bottom-center':
+      return 'bottom-4 left-1/2 transform -translate-x-1/2';
+    default:
+      return 'top-4 right-4';
+  }
+};
+
+// Convenience functions for different toast types
+export const useToastHelpers = () => {
+  const { addToast } = useToast();
+
+  const success = useCallback((title: string, message?: string, options?: Partial<Toast>) => {
+    addToast({
+      type: 'success',
+      title,
+      message,
+      ...options
+    });
+  }, [addToast]);
+
+  const error = useCallback((title: string, message?: string, options?: Partial<Toast>) => {
+    addToast({
+      type: 'error',
+      title,
+      message,
+      duration: 0, // Don't auto-dismiss errors
+      ...options
+    });
+  }, [addToast]);
+
+  const warning = useCallback((title: string, message?: string, options?: Partial<Toast>) => {
+    addToast({
+      type: 'warning',
+      title,
+      message,
+      ...options
+    });
+  }, [addToast]);
+
+  const info = useCallback((title: string, message?: string, options?: Partial<Toast>) => {
+    addToast({
+      type: 'info',
+      title,
+      message,
+      ...options
+    });
+  }, [addToast]);
+
+  return {
+    success,
+    error,
+    warning,
+    info
+  };
+};
+
+export default ToastProvider;
