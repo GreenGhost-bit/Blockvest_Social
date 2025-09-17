@@ -35,6 +35,21 @@ const VerificationPage: React.FC = () => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cacheKey = 'verification_documents';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 10 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 600000) {
+        const cachedDocuments = JSON.parse(cachedData);
+        setDocuments(cachedDocuments);
+        setLoading(false);
+        return;
+      }
+      
       // Mock documents - replace with actual API call
       const mockDocuments: Document[] = [
         {
@@ -78,9 +93,34 @@ const VerificationPage: React.FC = () => {
         }
       ];
       
-      setDocuments(mockDocuments);
+      // Validate and sanitize documents
+      const validatedDocuments = mockDocuments.map(document => ({
+        ...document,
+        id: document.id.trim(),
+        type: ['identity', 'address', 'income', 'bank', 'other'].includes(document.type) 
+          ? document.type 
+          : 'other' as Document['type'],
+        name: document.name.trim(),
+        status: ['pending', 'approved', 'rejected', 'expired'].includes(document.status) 
+          ? document.status 
+          : 'pending' as Document['status'],
+        uploadedAt: document.uploadedAt,
+        reviewedAt: document.reviewedAt,
+        reviewer: document.reviewer?.trim(),
+        notes: document.notes?.trim(),
+        fileUrl: document.fileUrl.trim()
+      }));
+      
+      setDocuments(validatedDocuments);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify(validatedDocuments));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (error) {
       console.error('Failed to fetch documents:', error);
+      // Set fallback data on error
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
@@ -88,7 +128,31 @@ const VerificationPage: React.FC = () => {
 
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    
+    // Validate form data
+    if (!selectedFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+    
+    if (!uploadData.name.trim()) {
+      alert('Please enter a document name');
+      return;
+    }
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(selectedFile.type)) {
+      alert('Please upload a valid file type (JPEG, PNG, or PDF)');
+      return;
+    }
+    
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (selectedFile.size > maxSize) {
+      alert('File size must be less than 10MB');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -96,18 +160,27 @@ const VerificationPage: React.FC = () => {
       const newDocument: Document = {
         id: Date.now().toString(),
         type: uploadData.type,
-        name: uploadData.name || selectedFile.name,
+        name: uploadData.name.trim(),
         status: 'pending',
         uploadedAt: new Date().toISOString(),
         fileUrl: URL.createObjectURL(selectedFile)
       };
       
-      setDocuments(prev => [newDocument, ...prev]);
+      const updatedDocuments = [newDocument, ...documents];
+      setDocuments(updatedDocuments);
+      
+      // Update cache
+      localStorage.setItem('verification_documents', JSON.stringify(updatedDocuments));
+      localStorage.setItem('verification_documents_time', Date.now().toString());
+      
       setSelectedFile(null);
       setUploadData({ type: 'identity', name: '' });
       setShowUploadForm(false);
+      
+      alert('Document uploaded successfully!');
     } catch (error) {
       console.error('Failed to upload document:', error);
+      alert('Failed to upload document. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -195,12 +268,24 @@ const VerificationPage: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900">Document Verification</h1>
               <p className="text-gray-600 mt-2">Upload and manage your verification documents</p>
             </div>
-            <button
-              onClick={() => setShowUploadForm(true)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              Upload Document
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={fetchDocuments}
+                disabled={loading}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowUploadForm(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Upload Document
+              </button>
+            </div>
           </div>
         </div>
 
