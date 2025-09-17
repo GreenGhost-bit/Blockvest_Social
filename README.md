@@ -1,348 +1,187 @@
-# Blockvest Social - Decentralized Social Investment Platform
+# Blockvest Social
 
-A comprehensive blockchain-based social investment platform built with Node.js, React, and Algorand blockchain technology.
+A decentralized social investment platform built on Algorand blockchain, enabling peer-to-peer lending and investment opportunities for individuals without formal credit history.
 
-## 🚀 Features
+## Features
 
-### Core Functionality
-- **User Management**: Secure user registration, authentication, and profile management
-- **Investment Platform**: Create, fund, and manage peer-to-peer investments
-- **Risk Assessment**: AI-powered risk evaluation and scoring system
-- **Social Features**: User connections, reputation system, and social interactions
-- **Governance**: Community-driven decision making and proposal system
-- **Real-time Notifications**: Instant updates via WebSocket connections
-- **Multi-Factor Authentication**: Enhanced security with TOTP, Algorand signatures, and email verification
+- 🔗 **Algorand Integration**: Built on Algorand blockchain for fast, secure, and low-cost transactions
+- 💰 **Peer-to-Peer Lending**: Connect borrowers with investors directly
+- 🛡️ **Risk Assessment**: AI-powered risk evaluation system
+- ⭐ **Reputation System**: Social reputation scoring for better trust
+- 🔒 **Smart Contracts**: Automated investment management with Algorand smart contracts
+- 📊 **Analytics Dashboard**: Comprehensive investment analytics and reporting
+- 🌐 **Web3 Wallet Integration**: Connect with Algorand wallets
+- 📱 **Responsive Design**: Modern, mobile-friendly interface
 
-### Security Features
-- **Comprehensive Validation**: Input sanitization and validation using Joi
-- **Rate Limiting**: Advanced rate limiting with speed limiting capabilities
-- **Security Headers**: Helmet.js integration with custom security policies
-- **Input Sanitization**: Protection against malicious input and injection attacks
-- **IP Validation**: Protection against private IP access in production
-- **User Agent Validation**: Detection and monitoring of suspicious requests
-
-### Data Management
-- **Enhanced Models**: Comprehensive data validation and error handling
-- **Database Optimization**: Connection pooling, monitoring, and graceful shutdown
-- **Index Management**: Automatic index creation and optimization
-- **Data Integrity**: Strict validation rules and constraints
-
-### Monitoring & Logging
-- **Structured Logging**: Winston-based logging with multiple transports
-- **Performance Monitoring**: Request timing and database performance tracking
-- **Security Logging**: Comprehensive security event logging
-- **Log Rotation**: Automatic log file rotation and management
-
-## 🏗️ Architecture
-
-### Backend Structure
-```
-backend/
-├── config/           # Configuration files
-├── contracts/        # Smart contract definitions
-├── middleware/       # Custom middleware
-│   ├── auth.js      # Authentication middleware
-│   ├── errorHandler.js # Error handling middleware
-│   ├── security.js  # Security middleware
-│   └── validation.js # Input validation middleware
-├── models/          # Database models
-│   ├── user.js      # User model with enhanced validation
-│   ├── investment.js # Investment model
-│   ├── riskassessment.js # Risk assessment model
-│   ├── notifications.js # Notification model
-│   ├── MFA.js       # Multi-factor authentication model
-│   └── document.js  # Document management model
-├── routes/          # API routes
-├── services/        # Business logic services
-├── utils/           # Utility functions
-│   ├── logger.js    # Advanced logging system
-│   └── database.js  # Database connection manager
-└── tests/           # Test suite
-    └── setup.js     # Test configuration and utilities
-```
-
-### Frontend Structure
-```
-frontend/
-├── app/             # Next.js app directory
-├── components/      # Reusable UI components
-│   ├── ui/         # Base UI components
-│   └── ...         # Feature-specific components
-├── hooks/          # Custom React hooks
-├── lib/            # Utility libraries
-└── public/         # Static assets
-```
-
-## 🛠️ Technology Stack
+## Tech Stack
 
 ### Backend
-- **Node.js**: Runtime environment
-- **Express.js**: Web framework
-- **MongoDB**: Database with Mongoose ODM
-- **Socket.IO**: Real-time communication
-- **JWT**: Authentication tokens
-- **bcryptjs**: Password hashing
-- **Joi**: Input validation
-- **Winston**: Logging
-- **Helmet**: Security headers
-- **Rate Limiting**: Request throttling
+- Node.js with Express.js
+- MongoDB with Mongoose
+- Algorand SDK for blockchain integration
+- Socket.io for real-time notifications
+- JWT for authentication
+- PyTeal for smart contracts
 
 ### Frontend
-- **Next.js**: React framework
-- **TypeScript**: Type safety
-- **Tailwind CSS**: Utility-first CSS framework
-- **Socket.IO Client**: Real-time updates
-- **React Hook Form**: Form management
+- Next.js 14 with TypeScript
+- Tailwind CSS for styling
+- React Context for state management
+- Algorand wallet integration
 
-### Blockchain
-- **Algorand**: Blockchain platform
-- **AlgoSDK**: Algorand development kit
+## Quick Start
 
-## 📋 Prerequisites
+### Prerequisites
+- Node.js 18+ 
+- MongoDB
+- Git
 
-- Node.js 18.0.0 or higher
-- MongoDB 5.0 or higher
-- npm or yarn package manager
+### Backend Setup
 
-## 🚀 Installation
-
-### 1. Clone the repository
+1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd blockvest_social_final
+cd blockvest_social_final/backend
 ```
 
-### 2. Install dependencies
+2. Install dependencies:
 ```bash
-# Install backend dependencies
-cd backend
 npm install
+```
 
-# Install frontend dependencies
+3. Set up environment variables:
+```bash
+cp config.env.example .env
+# Edit .env with your configuration
+```
+
+4. Set up the database:
+```bash
+npm run setup
+```
+
+5. Start the development server:
+```bash
+npm run dev
+```
+
+The backend will be available at `http://localhost:5000`
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
 cd ../frontend
+```
+
+2. Install dependencies:
+```bash
 npm install
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the backend directory based on `config.env.example`:
-
+3. Set up environment variables:
 ```bash
-# Database Configuration
+cp env.example .env.local
+# Edit .env.local with your configuration
+```
+
+4. Start the development server:
+```bash
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+## Environment Variables
+
+### Backend (.env)
+```env
 MONGODB_URI=mongodb://localhost:27017/blockvest_social
-PORT=5000
-NODE_ENV=development
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-here
-JWT_EXPIRES_IN=7d
-
-# Algorand Configuration
-ALGOD_TOKEN=your-algod-token
+JWT_SECRET=your-secret-key
 ALGOD_SERVER=https://testnet-api.algonode.cloud
-INDEXER_TOKEN=your-indexer-token
 INDEXER_SERVER=https://testnet-idx.algonode.cloud
-
-# Security Configuration
-BCRYPT_ROUNDS=12
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
+PORT=5000
 ```
 
-### 4. Start the application
-```bash
-# Start backend (from backend directory)
-npm run dev
-
-# Start frontend (from frontend directory)
-npm run dev
+### Frontend (.env.local)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_ALGOD_SERVER=https://testnet-api.algonode.cloud
+NEXT_PUBLIC_INDEXER_SERVER=https://testnet-idx.algonode.cloud
 ```
 
-## 🧪 Testing
+## Smart Contracts
+
+The platform uses Algorand smart contracts for:
+- Investment management
+- Governance voting
+- Automated repayments
+- Risk assessment
+
+Smart contracts are written in PyTeal and deployed on Algorand testnet/mainnet.
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/connect-wallet` - Connect Algorand wallet
+- `POST /api/auth/register` - Register user profile
+
+### Investments
+- `POST /api/investments/create` - Create investment opportunity
+- `POST /api/investments/fund` - Fund an investment
+- `GET /api/investments/explore` - Browse investments
+- `GET /api/investments/my-investments` - Get user investments
+
+### Smart Contracts
+- `POST /api/smart-contracts/deploy/investment` - Deploy investment contract
+- `POST /api/smart-contracts/deploy/governance` - Deploy governance contract
+- `POST /api/smart-contracts/investment/create` - Create investment on blockchain
+
+## Development
 
 ### Running Tests
 ```bash
-# Run all tests
+# Backend tests
+cd backend
 npm test
 
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
+# Frontend tests
+cd frontend
+npm test
 ```
 
-### Test Configuration
-The test suite includes:
-- In-memory MongoDB database for testing
-- Comprehensive test data creation utilities
-- Mock objects for request/response testing
-- Test database setup and teardown
+### Linting
+```bash
+# Backend
+cd backend
+npm run lint
 
-## 🔒 Security Features
+# Frontend
+cd frontend
+npm run lint
+```
 
-### Authentication & Authorization
-- JWT-based authentication
-- Multi-factor authentication (TOTP, Algorand signatures, email)
-- Role-based access control
-- Session management
+## Contributing
 
-### Input Validation & Sanitization
-- Comprehensive input validation using Joi
-- SQL injection protection
-- XSS protection
-- Input sanitization and filtering
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-### Rate Limiting & DDoS Protection
-- Configurable rate limiting
-- Speed limiting for gradual slowdown
-- IP-based request tracking
-- Suspicious activity detection
-
-### Security Headers
-- Content Security Policy (CSP)
-- XSS Protection
-- Frame options
-- HSTS configuration
-- Referrer policy
-
-## 📊 Monitoring & Logging
-
-### Logging Levels
-- **Error**: Application errors and exceptions
-- **Warn**: Warning conditions
-- **Info**: General information
-- **Debug**: Detailed debugging information
-
-### Log Categories
-- **Security**: Authentication, authorization, and security events
-- **Performance**: Request timing and database performance
-- **User**: User-related activities
-- **Investment**: Investment-related operations
-- **Blockchain**: Blockchain interactions
-- **API**: API request/response logging
-
-### Log Rotation
-- Automatic log file rotation
-- Configurable file size limits
-- Retention policy management
-- Compressed archive storage
-
-## 🗄️ Database Management
-
-### Connection Management
-- Connection pooling with configurable limits
-- Automatic reconnection on failure
-- Graceful shutdown handling
-- Connection health monitoring
-
-### Performance Optimization
-- Automatic index creation
-- Query optimization
-- Connection pool monitoring
-- Database statistics collection
-
-### Backup & Recovery
-- Automated backup scheduling
-- Data integrity checks
-- Recovery procedures
-- Point-in-time restoration
-
-## 🔧 Configuration
-
-### Environment Variables
-The application uses environment variables for configuration. See `backend/config.env.example` for all available options.
-
-### Security Configuration
-- CORS settings
-- Rate limiting parameters
-- Security header policies
-- Input validation rules
-
-### Database Configuration
-- Connection pool settings
-- Timeout configurations
-- Retry policies
-- Monitoring intervals
-
-## 📈 Performance Optimization
-
-### Backend Optimization
-- Request compression
-- Response caching
-- Database query optimization
-- Connection pooling
-
-### Frontend Optimization
-- Code splitting
-- Lazy loading
-- Image optimization
-- Bundle optimization
-
-## 🚀 Deployment
-
-### Production Considerations
-- Environment-specific configurations
-- Security hardening
-- Performance monitoring
-- Error tracking and reporting
-
-### Docker Support
-- Multi-stage Docker builds
-- Environment-specific configurations
-- Health checks and monitoring
-- Resource limits and constraints
-
-## 🤝 Contributing
-
-### Development Guidelines
-- Follow the established code style
-- Write comprehensive tests
-- Update documentation
-- Follow security best practices
-
-### Code Quality
-- ESLint configuration
-- Prettier formatting
-- TypeScript strict mode
-- Comprehensive error handling
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🆘 Support
+## Support
 
-### Documentation
-- API documentation
-- User guides
-- Developer documentation
-- Troubleshooting guides
+For support and questions, please open an issue on GitHub or contact the development team.
 
-### Community
-- GitHub issues
-- Discussion forums
-- Community chat
-- Developer meetups
+## Roadmap
 
-## 🔄 Changelog
-
-### Recent Improvements
-- Enhanced data models with comprehensive validation
-- Advanced security middleware implementation
-- Comprehensive error handling and logging
-- Improved database connection management
-- Enhanced testing infrastructure
-- Better input validation and sanitization
-- Advanced rate limiting and DDoS protection
-- Comprehensive monitoring and logging system
-
-### Version History
-- **v1.0.0**: Initial release with core functionality
-- **v1.1.0**: Enhanced security and validation
-- **v1.2.0**: Advanced logging and monitoring
-- **v1.3.0**: Comprehensive testing suite
-- **v1.4.0**: Performance optimizations and database improvements
-
----
-
-**Note**: This is a comprehensive social investment platform designed for production use. Please ensure proper security measures and compliance with local regulations before deployment. 
+- [ ] Mobile app development
+- [ ] Advanced analytics
+- [ ] Multi-chain support
+- [ ] DeFi integrations
+- [ ] Insurance products
+- [ ] Credit scoring improvements

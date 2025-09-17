@@ -11,8 +11,9 @@
     "build": "echo 'No build step needed for Node.js'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "setup": "node scripts/setup.js",
+    "setup:db": "node scripts/setup.js",
     "deploy:contracts": "node scripts/deploy-contracts.js",
-    "setup:db": "node scripts/setup-database.js",
     "cleanup:mfa": "node scripts/cleanup-mfa.js",
     "reassess:risk": "node scripts/scheduled-risk-reassessment.js",
     "generate:risk-report": "node scripts/generate-risk-report.js"
