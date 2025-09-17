@@ -2,114 +2,208 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWallet } from '../../components/ui/wallet-provider';
-import { useNotifications } from '../../lib/notifications-context';
+
+interface Notification {
+  id: string;
+  type: 'investment' | 'payment' | 'system' | 'security';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  actionUrl?: string;
+}
 
 const NotificationsPage: React.FC = () => {
   const { isConnected } = useWallet();
-  const { 
-    notifications, 
-    unreadCount, 
-    loading, 
-    error, 
-    markAsRead, 
-    markAllAsRead, 
-    deleteNotification, 
-    fetchNotifications,
-    connected 
-  } = useNotifications();
-
-  const [filter, setFilter] = useState<'all' | 'unread' | 'investment' | 'payment' | 'system'>('all');
-  const [page, setPage] = useState(1);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'investment' | 'payment' | 'system' | 'security'>('all');
 
   useEffect(() => {
     if (isConnected) {
-      fetchNotifications({ 
-        page: 1, 
-        unreadOnly: filter === 'unread',
-        category: filter !== 'all' && filter !== 'unread' ? filter : undefined
-      });
-      setPage(1);
+      fetchNotifications();
     }
-  }, [isConnected, filter]);
+  }, [isConnected]);
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    fetchNotifications({ 
-      page: nextPage, 
-      unreadOnly: filter === 'unread',
-      category: filter !== 'all' && filter !== 'unread' ? filter : undefined
-    });
-    setPage(nextPage);
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      // Mock notifications - replace with actual API call
+      const mockNotifications: Notification[] = [
+        {
+          id: '1',
+          type: 'investment',
+          title: 'Investment Funded',
+          message: 'Your investment request for $1,000 has been funded by Alice Johnson. The funds have been transferred to your account.',
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          read: false,
+          actionUrl: '/investments'
+        },
+        {
+          id: '2',
+          type: 'payment',
+          title: 'Payment Received',
+          message: 'You received a payment of $150 from Bob Smith for your investment. This payment includes the principal and interest.',
+          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          read: false,
+          actionUrl: '/investments'
+        },
+        {
+          id: '3',
+          type: 'system',
+          title: 'Risk Assessment Updated',
+          message: 'Your risk score has been updated to 75/100 based on your recent investment performance and repayment history.',
+          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/reputation'
+        },
+        {
+          id: '4',
+          type: 'security',
+          title: 'New Login Detected',
+          message: 'A new device logged into your account from San Francisco, CA. If this wasn\'t you, please secure your account immediately.',
+          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/security'
+        },
+        {
+          id: '5',
+          type: 'investment',
+          title: 'Investment Completed',
+          message: 'Your investment with Carol Davis has been successfully completed. Total return: $1,120 (12% interest).',
+          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/investments'
+        },
+        {
+          id: '6',
+          type: 'payment',
+          title: 'Payment Due Reminder',
+          message: 'Your payment of $200 is due in 3 days for your investment with David Wilson. Please ensure sufficient funds are available.',
+          timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/investments'
+        },
+        {
+          id: '7',
+          type: 'system',
+          title: 'Platform Update',
+          message: 'We\'ve released new features including enhanced analytics and improved risk assessment. Check out the updates!',
+          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/about'
+        },
+        {
+          id: '8',
+          type: 'security',
+          title: 'Password Changed',
+          message: 'Your password was successfully changed. If you didn\'t make this change, please contact support immediately.',
+          timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/security'
+        }
+      ];
+      
+      setNotifications(mockNotifications);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = (notificationId: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+  };
+
+  const deleteNotification = (notificationId: string) => {
+    setNotifications(prev => 
+      prev.filter(notification => notification.id !== notificationId)
+    );
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'investment_created':
-        return '💰';
-      case 'investment_funded':
-        return '✅';
-      case 'payment_received':
-        return '💳';
-      case 'payment_overdue':
-        return '⚠️';
-      case 'investment_completed':
-        return '🎉';
-      case 'investment_defaulted':
-        return '❌';
-      case 'profile_verified':
-        return '✅';
-      case 'reputation_updated':
-        return '⭐';
-      case 'new_message':
-        return '💬';
-      case 'system_announcement':
-        return '📢';
+      case 'investment':
+        return (
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+          </div>
+        );
+      case 'payment':
+        return (
+          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        );
+      case 'system':
+        return (
+          <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        );
+      case 'security':
+        return (
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+        );
       default:
-        return '🔔';
+        return (
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-12h-5l5-5 5 5h-5v12z" />
+            </svg>
+          </div>
+        );
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'border-red-500 bg-red-50';
-      case 'high':
-        return 'border-orange-500 bg-orange-50';
-      case 'medium':
-        return 'border-blue-500 bg-blue-50';
-      case 'low':
-        return 'border-gray-500 bg-gray-50';
-      default:
-        return 'border-gray-300 bg-white';
-    }
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} days ago`;
+    return date.toLocaleDateString();
   };
 
-  const formatDate = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
-  };
+  const filteredNotifications = notifications.filter(notification => {
+    if (filter === 'all') return true;
+    if (filter === 'unread') return !notification.read;
+    return notification.type === filter;
+  });
 
-  const handleNotificationClick = async (notification: any) => {
-    if (!notification.read) {
-      await markAsRead(notification.id);
-    }
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
-    }
-  };
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-3.4-3.4a9.02 9.02 0 001.4-5.6 9 9 0 00-18 0c0 2.1.7 4.1 1.9 5.6L0 17h5" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Connect Your Wallet</h3>
-          <p className="text-gray-600">
-            Please connect your wallet to view your notifications
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Connect Your Wallet</h1>
+          <p className="text-gray-600">Please connect your wallet to view notifications.</p>
         </div>
       </div>
     );
@@ -119,175 +213,129 @@ const NotificationsPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
               <p className="text-gray-600 mt-2">
-                Stay updated with your investment activities and platform updates
+                {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
               </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span>{connected ? 'Connected' : 'Disconnected'}</span>
-              </div>
-              {unreadCount > 0 && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
-                  {unreadCount} unread
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="border-b border-gray-200 p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-              <div className="flex space-x-1">
-                {(['all', 'unread', 'investment', 'payment', 'system'] as const).map((filterOption) => (
-                  <button
-                    key={filterOption}
-                    onClick={() => setFilter(filterOption)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      filter === filterOption
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-700 hover:text-blue-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Mark all as read
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="divide-y divide-gray-200">
-            {loading && notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading notifications...</p>
-              </div>
-            ) : error ? (
-              <div className="p-8 text-center">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  <p>{error}</p>
-                </div>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-3.4-3.4a9.02 9.02 0 001.4-5.6 9 9 0 00-18 0c0 2.1.7 4.1 1.9 5.6L0 17h5" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-                <p className="text-gray-600">
-                  {filter === 'unread' ? 'You have no unread notifications' : 'You have no notifications yet'}
-                </p>
-              </div>
-            ) : (
-              <>
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-6 hover:bg-gray-50 transition-colors border-l-4 ${
-                      !notification.read ? getPriorityColor(notification.priority) : 'border-gray-200'
-                    } ${notification.actionUrl ? 'cursor-pointer' : ''}`}
-                    onClick={() => handleNotificationClick(notification)}
-                  >
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0 text-2xl">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className={`text-lg font-medium ${
-                            !notification.read ? 'text-gray-900' : 'text-gray-700'
-                          }`}>
-                            {notification.title}
-                          </h3>
-                          <div className="flex items-center space-x-3">
-                            {!notification.read && (
-                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteNotification(notification.id);
-                              }}
-                              className="text-gray-400 hover:text-red-600 transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-gray-600 mt-2">{notification.message}</p>
-                        <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center space-x-4">
-                            <span className="text-sm text-gray-500">
-                              {formatDate(notification.createdAt)}
-                            </span>
-                            {notification.sender && (
-                              <span className="text-sm text-gray-500">
-                                From: {notification.sender.name}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              notification.category === 'investment' ? 'bg-blue-100 text-blue-800' :
-                              notification.category === 'payment' ? 'bg-green-100 text-green-800' :
-                              notification.category === 'system' ? 'bg-gray-100 text-gray-800' :
-                              notification.category === 'social' ? 'bg-purple-100 text-purple-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {notification.category}
-                            </span>
-                            {notification.priority === 'urgent' && (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                Urgent
-                              </span>
-                            )}
-                            {notification.priority === 'high' && (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                High
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {notifications.length >= 20 && (
-                  <div className="p-4 text-center border-t border-gray-200">
-                    <button
-                      onClick={loadMore}
-                      disabled={loading}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                    >
-                      {loading ? 'Loading...' : 'Load More'}
-                    </button>
-                  </div>
-                )}
-              </>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Mark all as read
+              </button>
             )}
           </div>
         </div>
+
+        {/* Filter Tabs */}
+        <div className="mb-6">
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'unread', label: 'Unread' },
+              { key: 'investment', label: 'Investments' },
+              { key: 'payment', label: 'Payments' },
+              { key: 'system', label: 'System' },
+              { key: 'security', label: 'Security' }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key as any)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  filter === tab.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading notifications...</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-12h-5l5-5 5 5h-5v12z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
+            <p className="text-gray-600">
+              {filter === 'unread' 
+                ? 'You\'re all caught up! No unread notifications.' 
+                : 'No notifications match your current filter.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`bg-white rounded-lg shadow-sm border p-6 ${
+                  !notification.read ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className={`text-lg font-medium ${
+                        !notification.read ? 'text-gray-900' : 'text-gray-700'
+                      }`}>
+                        {notification.title}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {!notification.read && (
+                          <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        )}
+                        <span className="text-sm text-gray-500">
+                          {formatTimestamp(notification.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mt-2">{notification.message}</p>
+                    <div className="flex items-center space-x-4 mt-4">
+                      {notification.actionUrl && (
+                        <a
+                          href={notification.actionUrl}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          View Details →
+                        </a>
+                      )}
+                      {!notification.read && (
+                        <button
+                          onClick={() => markAsRead(notification.id)}
+                          className="text-gray-500 hover:text-gray-700 text-sm"
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteNotification(notification.id)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

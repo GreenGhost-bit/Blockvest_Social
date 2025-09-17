@@ -1,188 +1,216 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
-import { useNotifications } from '../../lib/notifications-context';
+import React, { useState, useEffect } from 'react';
+import { useWallet } from './wallet-provider';
+
+interface Notification {
+  id: string;
+  type: 'investment' | 'payment' | 'system' | 'security';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  actionUrl?: string;
+}
 
 const NotificationsDropdown: React.FC = () => {
+  const { isConnected } = useWallet();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, connected } = useNotifications();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleNotificationClick = async (notificationId: string, actionUrl?: string) => {
-    await markAsRead(notificationId);
-    if (actionUrl) {
-      window.location.href = actionUrl;
+    if (isConnected) {
+      fetchNotifications();
     }
-    setIsOpen(false);
+  }, [isConnected]);
+
+  const fetchNotifications = async () => {
+    // Mock notifications for now
+    const mockNotifications: Notification[] = [
+      {
+        id: '1',
+        type: 'investment',
+        title: 'Investment Funded',
+        message: 'Your investment request for $1,000 has been funded by Alice Johnson',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        read: false,
+        actionUrl: '/investments'
+      },
+      {
+        id: '2',
+        type: 'payment',
+        title: 'Payment Received',
+        message: 'You received a payment of $150 from Bob Smith',
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        read: false,
+        actionUrl: '/investments'
+      },
+      {
+        id: '3',
+        type: 'system',
+        title: 'Risk Assessment Updated',
+        message: 'Your risk score has been updated to 75/100',
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        read: true,
+        actionUrl: '/reputation'
+      },
+      {
+        id: '4',
+        type: 'security',
+        title: 'New Login Detected',
+        message: 'A new device logged into your account',
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        read: true,
+        actionUrl: '/security'
+      }
+    ];
+    
+    setNotifications(mockNotifications);
+    setUnreadCount(mockNotifications.filter(n => !n.read).length);
+  };
+
+  const markAsRead = (notificationId: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+    setUnreadCount(0);
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'investment_created':
-        return '💰';
-      case 'investment_funded':
-        return '✅';
-      case 'payment_received':
-        return '💳';
-      case 'payment_overdue':
-        return '⚠️';
-      case 'investment_completed':
-        return '🎉';
-      case 'investment_defaulted':
-        return '❌';
-      case 'profile_verified':
-        return '✅';
-      case 'reputation_updated':
-        return '⭐';
-      case 'new_message':
-        return '💬';
-      case 'system_announcement':
-        return '📢';
+      case 'investment':
+        return (
+          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+          </svg>
+        );
+      case 'payment':
+        return (
+          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'system':
+        return (
+          <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'security':
+        return (
+          <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        );
       default:
-        return '🔔';
+        return (
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-12h-5l5-5 5 5h-5v12z" />
+          </svg>
+        );
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'border-red-500 bg-red-50';
-      case 'high':
-        return 'border-orange-500 bg-orange-50';
-      case 'medium':
-        return 'border-blue-500 bg-blue-50';
-      case 'low':
-        return 'border-gray-500 bg-gray-50';
-      default:
-        return 'border-gray-300 bg-white';
-    }
-  };
-
-  const formatTimeAgo = (timestamp: string) => {
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
     const now = new Date();
-    const notificationTime = new Date(timestamp);
-    const diffMs = now.getTime() - notificationTime.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return notificationTime.toLocaleDateString();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
   };
 
-  const recentNotifications = notifications.slice(0, 5);
+  if (!isConnected) {
+    return null;
+  }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
       >
-        <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-3.4-3.4a9.02 9.02 0 001.4-5.6 9 9 0 00-18 0c0 2.1.7 4.1 1.9 5.6L0 17h5m10-8a1 1 0 01-1 1H6a1 1 0 01-1-1V8a1 1 0 011-1h8a1 1 0 011 1v1z" />
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-12h-5l5-5 5 5h-5v12z" />
         </svg>
-        
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-            {unreadCount > 99 ? '99+' : unreadCount}
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
-        )}
-        
-        {!connected && (
-          <span className="absolute -top-1 -right-1 bg-yellow-500 rounded-full h-3 w-3"></span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-xs text-gray-500">
-                  {connected ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Mark all as read
+                </button>
+              )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800 mt-1"
-              >
-                Mark all as read
-              </button>
-            )}
           </div>
 
-          <div className="overflow-y-auto max-h-64">
-            {recentNotifications.length === 0 ? (
+          <div className="max-h-96 overflow-y-auto">
+            {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
-                <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-2">
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-3.4-3.4a9.02 9.02 0 001.4-5.6 9 9 0 00-18 0c0 2.1.7 4.1 1.9 5.6L0 17h5" />
-                  </svg>
-                </div>
-                <p className="text-sm">No notifications yet</p>
+                No notifications
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {recentNotifications.map((notification) => (
+                {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification.id, notification.actionUrl)}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-l-4 ${
-                      !notification.read ? getPriorityColor(notification.priority) : 'border-gray-200 bg-white'
+                    className={`p-4 hover:bg-gray-50 cursor-pointer ${
+                      !notification.read ? 'bg-blue-50' : ''
                     }`}
+                    onClick={() => {
+                      markAsRead(notification.id);
+                      if (notification.actionUrl) {
+                        window.location.href = notification.actionUrl;
+                      }
+                    }}
                   >
                     <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 text-xl">
+                      <div className="flex-shrink-0">
                         {getNotificationIcon(notification.type)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-600'}`}>
+                          <p className={`text-sm font-medium ${
+                            !notification.read ? 'text-gray-900' : 'text-gray-700'
+                          }`}>
                             {notification.title}
                           </p>
                           {!notification.read && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-sm text-gray-600 mt-1">
                           {notification.message}
                         </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-gray-500">
-                            {formatTimeAgo(notification.createdAt)}
-                          </span>
-                          {notification.priority === 'urgent' && (
-                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                              Urgent
-                            </span>
-                          )}
-                          {notification.priority === 'high' && (
-                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
-                              High
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatTimestamp(notification.timestamp)}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -191,18 +219,23 @@ const NotificationsDropdown: React.FC = () => {
             )}
           </div>
 
-          {notifications.length > 5 && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50">
-              <Link
-                href="/notifications"
-                className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                View all notifications
-              </Link>
-            </div>
-          )}
+          <div className="p-4 border-t border-gray-200">
+            <a
+              href="/notifications"
+              className="block text-center text-sm text-blue-600 hover:text-blue-800"
+            >
+              View all notifications
+            </a>
+          </div>
         </div>
+      )}
+
+      {/* Overlay to close dropdown when clicking outside */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsOpen(false)}
+        ></div>
       )}
     </div>
   );
