@@ -66,6 +66,26 @@ export class ErrorHandler {
   clearErrorLog(): void {
     this.errorLog = [];
   }
+
+  getErrorCount(): number {
+    return this.errorLog.length;
+  }
+
+  getErrorsByComponent(component: string): Array<{ error: Error; context: ErrorContext; timestamp: string }> {
+    return this.errorLog.filter(entry => entry.context.component === component);
+  }
+
+  getRecentErrors(count: number = 10): Array<{ error: Error; context: ErrorContext; timestamp: string }> {
+    return this.errorLog.slice(-count);
+  }
+
+  hasErrors(): boolean {
+    return this.errorLog.length > 0;
+  }
+
+  getLastError(): { error: Error; context: ErrorContext; timestamp: string } | null {
+    return this.errorLog.length > 0 ? this.errorLog[this.errorLog.length - 1] : null;
+  }
 }
 
 // API Error handling
@@ -190,6 +210,50 @@ export const recoveryStrategies = {
         }
         throw error;
       }
+    };
+  },
+
+  circuitBreaker: <T>(fn: () => Promise<T>, failureThreshold: number = 5, timeout: number = 60000) => {
+    let failures = 0;
+    let lastFailureTime = 0;
+    let state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+
+    return async (): Promise<T> => {
+      if (state === 'OPEN') {
+        if (Date.now() - lastFailureTime > timeout) {
+          state = 'HALF_OPEN';
+        } else {
+          throw new Error('Circuit breaker is OPEN');
+        }
+      }
+
+      try {
+        const result = await fn();
+        if (state === 'HALF_OPEN') {
+          state = 'CLOSED';
+          failures = 0;
+        }
+        return result;
+      } catch (error) {
+        failures++;
+        lastFailureTime = Date.now();
+        
+        if (failures >= failureThreshold) {
+          state = 'OPEN';
+        }
+        
+        throw error;
+      }
+    };
+  },
+
+  timeout: <T>(fn: () => Promise<T>, timeoutMs: number = 5000) => {
+    return async (): Promise<T> => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Operation timed out')), timeoutMs);
+      });
+
+      return Promise.race([fn(), timeoutPromise]);
     };
   }
 };
