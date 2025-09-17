@@ -49,9 +49,22 @@ const InvestmentsPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.investments.getMyInvestments();
-      setInvestments(response.investments);
+      
+      // Validate and process investment data
+      const processedInvestments = response.investments.map((investment: any) => ({
+        ...investment,
+        amount: Number(investment.amount) || 0,
+        interestRate: Number(investment.interestRate) || 0,
+        duration: Number(investment.duration) || 0,
+        createdAt: investment.createdAt || new Date().toISOString(),
+        status: investment.status || 'pending'
+      }));
+      
+      setInvestments(processedInvestments);
     } catch (error) {
       console.error('Failed to fetch investments:', error);
+      // Set empty array on error to prevent UI issues
+      setInvestments([]);
     } finally {
       setLoading(false);
     }
@@ -59,14 +72,45 @@ const InvestmentsPage: React.FC = () => {
 
   const handleCreateInvestment = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    const amount = parseFloat(newInvestment.amount);
+    const interestRate = parseFloat(newInvestment.interestRate);
+    const duration = parseInt(newInvestment.duration);
+    
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    
+    if (!interestRate || interestRate <= 0 || interestRate > 50) {
+      alert('Interest rate must be between 0.1% and 50%');
+      return;
+    }
+    
+    if (!duration || duration <= 0 || duration > 60) {
+      alert('Duration must be between 1 and 60 months');
+      return;
+    }
+    
+    if (!newInvestment.purpose.trim()) {
+      alert('Please enter a purpose for your investment');
+      return;
+    }
+    
+    if (!newInvestment.description.trim() || newInvestment.description.length < 10) {
+      alert('Please enter a description (at least 10 characters)');
+      return;
+    }
+    
     try {
       setLoading(true);
       await api.investments.create({
-        amount: parseFloat(newInvestment.amount),
-        purpose: newInvestment.purpose,
-        description: newInvestment.description,
-        interestRate: parseFloat(newInvestment.interestRate),
-        duration: parseInt(newInvestment.duration)
+        amount,
+        purpose: newInvestment.purpose.trim(),
+        description: newInvestment.description.trim(),
+        interestRate,
+        duration
       });
       
       setNewInvestment({
@@ -80,6 +124,7 @@ const InvestmentsPage: React.FC = () => {
       await fetchInvestments();
     } catch (error) {
       console.error('Failed to create investment:', error);
+      alert('Failed to create investment. Please try again.');
     } finally {
       setLoading(false);
     }
