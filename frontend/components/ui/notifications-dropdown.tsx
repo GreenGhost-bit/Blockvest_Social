@@ -26,65 +26,115 @@ const NotificationsDropdown: React.FC = () => {
   }, [isConnected]);
 
   const fetchNotifications = async () => {
-    // Mock notifications for now
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'investment',
-        title: 'Investment Funded',
-        message: 'Your investment request for $1,000 has been funded by Alice Johnson',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        read: false,
-        actionUrl: '/investments'
-      },
-      {
-        id: '2',
-        type: 'payment',
-        title: 'Payment Received',
-        message: 'You received a payment of $150 from Bob Smith',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        read: false,
-        actionUrl: '/investments'
-      },
-      {
-        id: '3',
-        type: 'system',
-        title: 'Risk Assessment Updated',
-        message: 'Your risk score has been updated to 75/100',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        read: true,
-        actionUrl: '/reputation'
-      },
-      {
-        id: '4',
-        type: 'security',
-        title: 'New Login Detected',
-        message: 'A new device logged into your account',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        read: true,
-        actionUrl: '/security'
+    try {
+      // Check cache first
+      const cacheKey = 'notifications';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 2 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 120000) {
+        const cachedNotifications = JSON.parse(cachedData);
+        setNotifications(cachedNotifications);
+        setUnreadCount(cachedNotifications.filter((n: Notification) => !n.read).length);
+        return;
       }
-    ];
-    
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
+      
+      // Mock notifications for now - replace with actual API call
+      const mockNotifications: Notification[] = [
+        {
+          id: '1',
+          type: 'investment',
+          title: 'Investment Funded',
+          message: 'Your investment request for $1,000 has been funded by Alice Johnson',
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          read: false,
+          actionUrl: '/investments'
+        },
+        {
+          id: '2',
+          type: 'payment',
+          title: 'Payment Received',
+          message: 'You received a payment of $150 from Bob Smith',
+          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          read: false,
+          actionUrl: '/investments'
+        },
+        {
+          id: '3',
+          type: 'system',
+          title: 'Risk Assessment Updated',
+          message: 'Your risk score has been updated to 75/100',
+          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/reputation'
+        },
+        {
+          id: '4',
+          type: 'security',
+          title: 'New Login Detected',
+          message: 'A new device logged into your account',
+          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          read: true,
+          actionUrl: '/security'
+        }
+      ];
+      
+      // Validate and sanitize notifications
+      const validatedNotifications = mockNotifications.map(notification => ({
+        ...notification,
+        id: notification.id.trim(),
+        type: ['investment', 'payment', 'system', 'security'].includes(notification.type) 
+          ? notification.type 
+          : 'system' as 'investment' | 'payment' | 'system' | 'security',
+        title: notification.title.trim(),
+        message: notification.message.trim(),
+        timestamp: notification.timestamp,
+        read: Boolean(notification.read),
+        actionUrl: notification.actionUrl?.trim() || undefined
+      }));
+      
+      setNotifications(validatedNotifications);
+      setUnreadCount(validatedNotifications.filter(n => !n.read).length);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify(validatedNotifications));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+      // Set fallback data on error
+      setNotifications([]);
+      setUnreadCount(0);
+    }
   };
 
   const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
+    setNotifications(prev => {
+      const updated = prev.map(notification => 
         notification.id === notificationId 
           ? { ...notification, read: true }
           : notification
-      )
-    );
+      );
+      
+      // Update cache
+      localStorage.setItem('notifications', JSON.stringify(updated));
+      
+      return updated;
+    });
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+    setNotifications(prev => {
+      const updated = prev.map(notification => ({ ...notification, read: true }));
+      
+      // Update cache
+      localStorage.setItem('notifications', JSON.stringify(updated));
+      
+      return updated;
+    });
     setUnreadCount(0);
   };
 
@@ -159,14 +209,25 @@ const NotificationsDropdown: React.FC = () => {
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-              {unreadCount > 0 && (
+              <div className="flex items-center space-x-2">
                 <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  onClick={fetchNotifications}
+                  className="text-sm text-gray-600 hover:text-gray-800 p-1 rounded"
+                  title="Refresh notifications"
                 >
-                  Mark all as read
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                 </button>
-              )}
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
