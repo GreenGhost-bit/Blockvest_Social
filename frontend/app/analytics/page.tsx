@@ -43,6 +43,20 @@ const AnalyticsPage: React.FC = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cacheKey = `analytics_${timeRange}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 5 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+        setAnalyticsData(JSON.parse(cachedData));
+        setLoading(false);
+        return;
+      }
+      
       // Mock data for now - replace with actual API call
       const mockData: AnalyticsData = {
         totalInvestments: 15,
@@ -70,9 +84,54 @@ const AnalyticsPage: React.FC = () => {
           { riskLevel: 'High', count: 3 },
         ]
       };
-      setAnalyticsData(mockData);
+      
+      // Process and validate data
+      const processedData = {
+        ...mockData,
+        totalInvestments: Math.max(0, mockData.totalInvestments),
+        totalAmount: Math.max(0, mockData.totalAmount),
+        activeInvestments: Math.max(0, mockData.activeInvestments),
+        completedInvestments: Math.max(0, mockData.completedInvestments),
+        defaultedInvestments: Math.max(0, mockData.defaultedInvestments),
+        averageInterestRate: Math.max(0, Math.min(100, mockData.averageInterestRate)),
+        totalRepaid: Math.max(0, mockData.totalRepaid),
+        monthlyData: mockData.monthlyData.map(item => ({
+          ...item,
+          investments: Math.max(0, item.investments),
+          amount: Math.max(0, item.amount)
+        })),
+        categoryData: mockData.categoryData.map(item => ({
+          ...item,
+          count: Math.max(0, item.count),
+          amount: Math.max(0, item.amount)
+        })),
+        riskDistribution: mockData.riskDistribution.map(item => ({
+          ...item,
+          count: Math.max(0, item.count)
+        }))
+      };
+      
+      setAnalyticsData(processedData);
+      
+      // Cache the processed data
+      localStorage.setItem(cacheKey, JSON.stringify(processedData));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
+      // Set fallback data on error
+      setAnalyticsData({
+        totalInvestments: 0,
+        totalAmount: 0,
+        activeInvestments: 0,
+        completedInvestments: 0,
+        defaultedInvestments: 0,
+        averageInterestRate: 0,
+        totalRepaid: 0,
+        monthlyData: [],
+        categoryData: [],
+        riskDistribution: []
+      });
     } finally {
       setLoading(false);
     }
@@ -102,6 +161,27 @@ const AnalyticsPage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading analytics...</p>
+          <div className="mt-2 text-sm text-gray-500">
+            Fetching data for {timeRange} period
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Failed to load analytics</h2>
+          <p className="text-gray-600 mb-4">There was an error loading your analytics data.</p>
+          <button
+            onClick={fetchAnalytics}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -127,6 +207,16 @@ const AnalyticsPage: React.FC = () => {
                 <option value="90">Last 90 days</option>
                 <option value="365">Last year</option>
               </select>
+              <button
+                onClick={fetchAnalytics}
+                disabled={loading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
             </div>
           </div>
         </div>
