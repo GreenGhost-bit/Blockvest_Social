@@ -1,0 +1,20 @@
+[33m7ae6274[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m docs: Update README with comprehensive documentation of all improvements, security features, and technical architecture
+[33m4b97abb[m feat: Add comprehensive test setup with in-memory database, test data creation, and mock utilities for reliable testing
+[33md0e1135[m feat: Add comprehensive security middleware with CORS, rate limiting, input sanitization, and security headers
+[33m101136f[m feat: Add comprehensive database connection manager with connection pooling, monitoring, and graceful shutdown capabilities
+[33m599b044[m feat: Add comprehensive validation middleware using Joi with detailed error messages for all data models
+[33m3114221[m feat: Add comprehensive error handling middleware and advanced logging system with structured logging and log rotation
+[33m10c3286[m feat: Enhance document model with comprehensive validation, security improvements, and better file handling constraints
+[33mf3f762b[m feat: Enhance MFA model with comprehensive validation, security improvements, and better data integrity constraints
+[33mfe0cefe[m feat: Enhance notification model with comprehensive validation, error handling, and improved real-time functionality
+[33md386abb[m feat: Enhance risk assessment model with comprehensive validation, error messages, and improved data integrity constraints
+[33m38a1d9f[m feat: Enhance investment model with comprehensive validation, error messages, and improved data integrity constraints
+[33ma305c6d[m feat: Enhance user model with improved validation, error messages, and better field constraints for data integrity
+[33mfd7f843[m feat: Add comprehensive environment configuration template with all necessary variables for production deployment
+[33m734e369[m feat: Enhanced wallet provider with advanced blockchain integration and transaction management
+[33mdc54894[m feat: Enhanced user profile with advanced portfolio analytics and social features
+[33mb93e94c[m feat: Enhanced analytics dashboard with advanced metrics and real-time data
+[33m268b66b[m feat: Enhanced dashboard with advanced analytics and real-time features
+[33m031ed8e[m feat: Enhanced investment card component with advanced UI variants and animations
+[33m6f84295[m feat: Enhanced analytics service with advanced ML insights and real-time data processing
+[33m2310a71[m feat: Enhanced notification service with advanced delivery channels and smart templating
