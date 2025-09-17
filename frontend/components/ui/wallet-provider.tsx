@@ -147,66 +147,108 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   );
 
   const connectWallet = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setConnectionStatus('connecting');
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        setLoading(true);
+        setError(null);
+        setConnectionStatus('connecting');
 
-      if (typeof window !== 'undefined' && 'algorand' in window) {
-        const algorand = (window as any).algorand;
-        
-        const accounts = await algorand.enable();
-        const address = accounts[0];
-        
-        setWalletAddress(address);
-        setIsConnected(true);
-        setConnectionStatus('connected');
-        
-        const message = `Connect to Blockvest Social at ${Date.now()}`;
-        const encodedMessage = new TextEncoder().encode(message);
-        
-        const signature = await algorand.signBytes(encodedMessage, address);
-        
-        const response = await fetch('/api/auth/connect-wallet', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            walletAddress: address,
-            signature: signature.signature,
-            message: message,
-            network: networkConfig.name.toLowerCase()
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user);
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('network', networkConfig.name.toLowerCase());
+        if (typeof window !== 'undefined' && 'algorand' in window) {
+          const algorand = (window as any).algorand;
           
-          await Promise.all([
-            fetchBalance(address),
-            fetchAssets(),
-            fetchTransactions()
-          ]);
+          // Check if wallet is already connected
+          if (algorand.isConnected && algorand.isConnected()) {
+            const accounts = await algorand.getAccounts();
+            if (accounts && accounts.length > 0) {
+              const address = accounts[0];
+              setWalletAddress(address);
+              setIsConnected(true);
+              setConnectionStatus('connected');
+              
+              // Skip authentication if already connected
+              const token = localStorage.getItem('token');
+              if (token) {
+                await Promise.all([
+                  fetchBalance(address),
+                  fetchAssets(),
+                  fetchTransactions()
+                ]);
+                return;
+              }
+            }
+          }
+          
+          const accounts = await algorand.enable();
+          const address = accounts[0];
+          
+          if (!address) {
+            throw new Error('No wallet address received');
+          }
+          
+          setWalletAddress(address);
+          setIsConnected(true);
+          setConnectionStatus('connected');
+          
+          const message = `Connect to Blockvest Social at ${Date.now()}`;
+          const encodedMessage = new TextEncoder().encode(message);
+          
+          const signature = await algorand.signBytes(encodedMessage, address);
+          
+          const response = await fetch('/api/auth/connect-wallet', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              walletAddress: address,
+              signature: signature.signature,
+              message: message,
+              network: networkConfig.name.toLowerCase()
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('network', networkConfig.name.toLowerCase());
+            
+            await Promise.all([
+              fetchBalance(address),
+              fetchAssets(),
+              fetchTransactions()
+            ]);
+            return; // Success, exit retry loop
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Authentication failed (${response.status})`);
+          }
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Authentication failed');
+          throw new Error('No Algorand wallet found. Please install Pera Wallet or similar.');
         }
-      } else {
-        throw new Error('No Algorand wallet found. Please install Pera Wallet or similar.');
+      } catch (err) {
+        retryCount++;
+        const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
+        
+        if (retryCount >= maxRetries) {
+          setError(`${errorMessage} (Attempt ${retryCount}/${maxRetries})`);
+          setIsConnected(false);
+          setWalletAddress(null);
+          setConnectionStatus('error');
+          console.error('Wallet connection error after retries:', err);
+        } else {
+          console.warn(`Wallet connection attempt ${retryCount} failed:`, errorMessage);
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      } finally {
+        if (retryCount >= maxRetries) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
-      setError(errorMessage);
-      setIsConnected(false);
-      setWalletAddress(null);
-      setConnectionStatus('error');
-      console.error('Wallet connection error:', err);
-    } finally {
-      setLoading(false);
     }
   }, [networkConfig, fetchBalance, fetchAssets, fetchTransactions]);
 
