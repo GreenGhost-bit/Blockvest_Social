@@ -1,344 +1,434 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/frontend/components/ui/card"
-import { Button } from "@/frontend/components/ui/button"
-import { Badge } from "@/frontend/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Vote, Clock, Users, TrendingUp, CheckCircle, XCircle, AlertCircle } from "lucide-react"
-import { motion } from "framer-motion"
+import React, { useState, useEffect } from 'react';
+import { useWallet } from '../../components/ui/wallet-provider';
 
-const proposals = [
-  {
-    id: 1,
-    title: "Reduce Platform Fees for Small Investments",
-    description:
-      "Proposal to reduce platform fees from 2% to 1% for investments under $100 to encourage micro-investing.",
-    status: "Active",
-    votesFor: 1247,
-    votesAgainst: 342,
-    totalVotes: 1589,
-    quorum: 2000,
-    timeLeft: "3 days",
-    proposer: "Community DAO",
-    category: "Platform",
-    votingPower: 150,
-    userVoted: false,
-  },
-  {
-    id: 2,
-    title: "Add Carbon Credit Marketplace",
-    description:
-      "Integrate a carbon credit marketplace where entrepreneurs can sell verified carbon offsets to investors.",
-    status: "Active",
-    votesFor: 892,
-    votesAgainst: 156,
-    totalVotes: 1048,
-    quorum: 1500,
-    timeLeft: "5 days",
-    proposer: "Green Initiative Team",
-    category: "Feature",
-    votingPower: 150,
-    userVoted: true,
-    userVote: "for",
-  },
-  {
-    id: 3,
-    title: "Implement Reputation-Based Lending Rates",
-    description:
-      "Adjust lending rates based on borrower reputation scores to incentivize good behavior and reduce risk.",
-    status: "Passed",
-    votesFor: 2156,
-    votesAgainst: 445,
-    totalVotes: 2601,
-    quorum: 2000,
-    timeLeft: "Completed",
-    proposer: "Risk Management Committee",
-    category: "Policy",
-    votingPower: 150,
-    userVoted: true,
-    userVote: "for",
-  },
-  {
-    id: 4,
-    title: "Increase Maximum Investment Limit",
-    description: "Raise the maximum individual investment limit from $1,000 to $2,500 per opportunity.",
-    status: "Failed",
-    votesFor: 567,
-    votesAgainst: 1834,
-    totalVotes: 2401,
-    quorum: 2000,
-    timeLeft: "Completed",
-    proposer: "Investment Committee",
-    category: "Policy",
-    votingPower: 150,
-    userVoted: true,
-    userVote: "against",
-  },
-]
+interface Proposal {
+  id: string;
+  title: string;
+  description: string;
+  creator: string;
+  status: 'draft' | 'active' | 'passed' | 'rejected' | 'expired';
+  createdAt: string;
+  votingStart: string;
+  votingEnd: string;
+  yesVotes: number;
+  noVotes: number;
+  totalVotes: number;
+  quorumThreshold: number;
+  majorityThreshold: number;
+  userVote?: 'yes' | 'no';
+}
 
-const votingStats = [
-  { label: "Your Voting Power", value: "150", icon: Vote },
-  { label: "Proposals Voted", value: "12", icon: CheckCircle },
-  { label: "Governance Tokens", value: "1,250", icon: TrendingUp },
-  { label: "Community Rank", value: "#47", icon: Users },
-]
+const GovernancePage: React.FC = () => {
+  const { isConnected } = useWallet();
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newProposal, setNewProposal] = useState({
+    title: '',
+    description: ''
+  });
 
-export default function GovernancePage() {
-  const [selectedProposal, setSelectedProposal] = useState<(typeof proposals)[0] | null>(null)
-  const [voteChoice, setVoteChoice] = useState("")
-
-  const handleVote = () => {
-    if (selectedProposal && voteChoice) {
-      // Simulate voting
-      console.log(`Voted ${voteChoice} on proposal ${selectedProposal.id}`)
+  useEffect(() => {
+    if (isConnected) {
+      fetchProposals();
     }
+  }, [isConnected]);
+
+  const fetchProposals = async () => {
+    try {
+      setLoading(true);
+      // Mock proposals - replace with actual API call
+      const mockProposals: Proposal[] = [
+        {
+          id: '1',
+          title: 'Increase Platform Fee to 2%',
+          description: 'Proposal to increase the platform fee from 1.5% to 2% to fund additional security measures and platform improvements. The additional revenue will be used for enhanced risk assessment tools and better user support.',
+          creator: 'Alice Johnson',
+          status: 'active',
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          votingStart: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          votingEnd: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+          yesVotes: 45,
+          noVotes: 23,
+          totalVotes: 68,
+          quorumThreshold: 100,
+          majorityThreshold: 51,
+          userVote: undefined
+        },
+        {
+          id: '2',
+          title: 'Implement New Risk Assessment Algorithm',
+          description: 'Proposal to implement a new AI-powered risk assessment algorithm that will provide more accurate risk scores and better protect investors. This will require additional development resources and testing.',
+          creator: 'Bob Smith',
+          status: 'active',
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          votingStart: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          votingEnd: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          yesVotes: 78,
+          noVotes: 12,
+          totalVotes: 90,
+          quorumThreshold: 100,
+          majorityThreshold: 51,
+          userVote: 'yes'
+        },
+        {
+          id: '3',
+          title: 'Add Support for Additional Cryptocurrencies',
+          description: 'Proposal to add support for USDC and USDT in addition to ALGO for investments. This would provide more flexibility for users and potentially attract more investors to the platform.',
+          creator: 'Carol Davis',
+          status: 'passed',
+          createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          votingStart: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          votingEnd: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          yesVotes: 156,
+          noVotes: 34,
+          totalVotes: 190,
+          quorumThreshold: 100,
+          majorityThreshold: 51,
+          userVote: 'yes'
+        },
+        {
+          id: '4',
+          title: 'Reduce Minimum Investment Amount',
+          description: 'Proposal to reduce the minimum investment amount from $100 to $50 to make the platform more accessible to smaller investors and increase participation.',
+          creator: 'David Wilson',
+          status: 'rejected',
+          createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
+          votingStart: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
+          votingEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          yesVotes: 67,
+          noVotes: 89,
+          totalVotes: 156,
+          quorumThreshold: 100,
+          majorityThreshold: 51,
+          userVote: 'no'
+        }
+      ];
+      
+      setProposals(mockProposals);
+    } catch (error) {
+      console.error('Failed to fetch proposals:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProposal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      // Mock proposal creation - replace with actual API call
+      const proposal: Proposal = {
+        id: Date.now().toString(),
+        title: newProposal.title,
+        description: newProposal.description,
+        creator: 'Current User',
+        status: 'draft',
+        createdAt: new Date().toISOString(),
+        votingStart: new Date().toISOString(),
+        votingEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        yesVotes: 0,
+        noVotes: 0,
+        totalVotes: 0,
+        quorumThreshold: 100,
+        majorityThreshold: 51
+      };
+      
+      setProposals(prev => [proposal, ...prev]);
+      setNewProposal({ title: '', description: '' });
+      setShowCreateForm(false);
+    } catch (error) {
+      console.error('Failed to create proposal:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVote = async (proposalId: string, vote: 'yes' | 'no') => {
+    try {
+      setProposals(prev => 
+        prev.map(proposal => 
+          proposal.id === proposalId 
+            ? {
+                ...proposal,
+                userVote: vote,
+                yesVotes: vote === 'yes' ? proposal.yesVotes + 1 : proposal.yesVotes,
+                noVotes: vote === 'no' ? proposal.noVotes + 1 : proposal.noVotes,
+                totalVotes: proposal.totalVotes + 1
+              }
+            : proposal
+        )
+      );
+    } catch (error) {
+      console.error('Failed to vote:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-blue-100 text-blue-800';
+      case 'passed':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
+  const getVotingProgress = (proposal: Proposal) => {
+    const progress = (proposal.totalVotes / proposal.quorumThreshold) * 100;
+    const yesPercentage = proposal.totalVotes > 0 ? (proposal.yesVotes / proposal.totalVotes) * 100 : 0;
+    return { progress: Math.min(progress, 100), yesPercentage };
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const isVotingActive = (proposal: Proposal) => {
+    const now = new Date();
+    const votingEnd = new Date(proposal.votingEnd);
+    return proposal.status === 'active' && now < votingEnd;
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Connect Your Wallet</h1>
+          <p className="text-gray-600">Please connect your wallet to participate in governance.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-navy-dark py-8 px-4">
-      <div className="container mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-12"
-        >
-          <h1 className="font-heading text-4xl md:text-5xl font-bold text-white mb-4">Governance Dashboard</h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Participate in platform governance and shape the future of Blockvest Social
-          </p>
-        </motion.div>
-
-        {/* Voting Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {votingStats.map((stat, index) => {
-            const Icon = stat.icon
-            return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="bg-light-bg">
-                  <CardContent className="p-6 text-center">
-                    <Icon className="w-8 h-8 text-blockchain-green mx-auto mb-4" />
-                    <div className="text-3xl font-bold text-navy-dark mb-2">{stat.value}</div>
-                    <div className="text-gray-600 text-sm">{stat.label}</div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )
-          })}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Governance</h1>
+              <p className="text-gray-600 mt-2">Participate in platform governance and decision making</p>
+            </div>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Create Proposal
+            </button>
+          </div>
         </div>
 
-        {/* Active Proposals */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mb-8"
-        >
-          <Card className="bg-light-bg">
-            <CardHeader>
-              <CardTitle className="text-navy-dark flex items-center">
-                <Vote className="w-6 h-6 mr-2 text-blockchain-green" />
-                Governance Proposals
-              </CardTitle>
-              <CardDescription>Vote on proposals that shape the platform's future</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {proposals.map((proposal, index) => {
-                  const forPercentage = (proposal.votesFor / proposal.totalVotes) * 100
-                  const againstPercentage = (proposal.votesAgainst / proposal.totalVotes) * 100
-                  const quorumPercentage = (proposal.totalVotes / proposal.quorum) * 100
-
-                  return (
-                    <motion.div
-                      key={proposal.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+        {/* Create Proposal Modal */}
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Create New Proposal</h2>
+                  <button
+                    onClick={() => setShowCreateForm(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <form onSubmit={handleCreateProposal} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Proposal Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newProposal.title}
+                      onChange={(e) => setNewProposal({ ...newProposal, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter a clear, concise title for your proposal"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={newProposal.description}
+                      onChange={(e) => setNewProposal({ ...newProposal, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={6}
+                      placeholder="Provide a detailed description of your proposal, including the rationale and expected impact"
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-navy-dark text-lg">{proposal.title}</h3>
-                            <Badge
-                              className={
-                                proposal.status === "Active"
-                                  ? "bg-blockchain-green/20 text-blockchain-green"
-                                  : proposal.status === "Passed"
-                                    ? "bg-green-100 text-green-800"
-                                    : proposal.status === "Failed"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
-                              }
-                            >
-                              {proposal.status === "Active" && <AlertCircle className="w-3 h-3 mr-1" />}
-                              {proposal.status === "Passed" && <CheckCircle className="w-3 h-3 mr-1" />}
-                              {proposal.status === "Failed" && <XCircle className="w-3 h-3 mr-1" />}
-                              {proposal.status}
-                            </Badge>
-                            <Badge variant="outline" className="text-blockchain-green border-blockchain-green">
-                              {proposal.category}
-                            </Badge>
-                          </div>
-                          <p className="text-gray-600 mb-4">{proposal.description}</p>
-                          <div className="text-sm text-gray-500 mb-4">Proposed by: {proposal.proposer}</div>
-                        </div>
-                      </div>
-
-                      {/* Voting Results */}
-                      <div className="space-y-3 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">For: {proposal.votesFor.toLocaleString()}</span>
-                          <span className="text-gray-600">Against: {proposal.votesAgainst.toLocaleString()}</span>
-                        </div>
-
-                        <div className="relative">
-                          <div className="flex h-4 rounded-full overflow-hidden bg-gray-200">
-                            <div className="bg-blockchain-green" style={{ width: `${forPercentage}%` }} />
-                            <div className="bg-red-400" style={{ width: `${againstPercentage}%` }} />
-                          </div>
-                          <div className="flex justify-between text-xs mt-1">
-                            <span className="text-blockchain-green">{forPercentage.toFixed(1)}% For</span>
-                            <span className="text-red-500">{againstPercentage.toFixed(1)}% Against</span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Quorum Progress</span>
-                            <span className="text-gray-600">
-                              {proposal.totalVotes.toLocaleString()} / {proposal.quorum.toLocaleString()}
-                            </span>
-                          </div>
-                          <Progress value={quorumPercentage} className="h-2" />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center text-gray-500">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <span className="text-sm">{proposal.timeLeft}</span>
-                          </div>
-                          {proposal.userVoted && (
-                            <Badge className="bg-golden-yellow/20 text-golden-yellow">Voted: {proposal.userVote}</Badge>
-                          )}
-                        </div>
-
-                        {proposal.status === "Active" && !proposal.userVoted && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                className="bg-blockchain-green hover:bg-blockchain-green/90 text-white"
-                                onClick={() => setSelectedProposal(proposal)}
-                              >
-                                <Vote className="w-4 h-4 mr-2" />
-                                Vote Now
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-light-bg">
-                              <DialogHeader>
-                                <DialogTitle className="text-navy-dark">Vote on Proposal</DialogTitle>
-                                <DialogDescription className="text-navy-dark/70">
-                                  {selectedProposal?.title}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <p className="text-sm text-gray-600 mb-4">
-                                    Your voting power:{" "}
-                                    <span className="font-semibold">{proposal.votingPower} votes</span>
-                                  </p>
-                                  <RadioGroup value={voteChoice} onValueChange={setVoteChoice}>
-                                    <div className="flex items-center space-x-2">
-                                      <RadioGroupItem value="for" id="for" />
-                                      <Label htmlFor="for" className="text-navy-dark">
-                                        Vote For
-                                      </Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <RadioGroupItem value="against" id="against" />
-                                      <Label htmlFor="against" className="text-navy-dark">
-                                        Vote Against
-                                      </Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <RadioGroupItem value="abstain" id="abstain" />
-                                      <Label htmlFor="abstain" className="text-navy-dark">
-                                        Abstain
-                                      </Label>
-                                    </div>
-                                  </RadioGroup>
-                                </div>
-                                <Button
-                                  className="w-full bg-blockchain-green hover:bg-blockchain-green/90 text-white"
-                                  onClick={handleVote}
-                                  disabled={!voteChoice}
-                                >
-                                  <Vote className="w-4 h-4 mr-2" />
-                                  Submit Vote
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                      </div>
-                    </motion.div>
-                  )
-                })}
+                      {loading ? 'Creating...' : 'Create Proposal'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateForm(false)}
+                      className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </div>
+        )}
 
-        {/* Governance Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-        >
-          <Card className="bg-gradient-to-r from-blockchain-green to-golden-yellow text-navy-dark">
-            <CardContent className="p-8 text-center">
-              <h2 className="font-heading text-3xl font-bold mb-4">Shape the Future of Micro-Investment</h2>
-              <p className="text-lg mb-6 opacity-90">
-                Your voice matters. Participate in governance to help build a more inclusive financial ecosystem.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <div className="text-2xl font-bold mb-2">2,450+</div>
-                  <div className="text-sm opacity-90">Active Voters</div>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading proposals...</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {proposals.map((proposal) => {
+              const { progress, yesPercentage } = getVotingProgress(proposal);
+              const votingActive = isVotingActive(proposal);
+              
+              return (
+                <div key={proposal.id} className="bg-white rounded-lg shadow-md p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">{proposal.title}</h3>
+                      <p className="text-gray-600 mb-4">{proposal.description}</p>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span>By {proposal.creator}</span>
+                        <span>•</span>
+                        <span>Created {formatDate(proposal.createdAt)}</span>
+                        <span>•</span>
+                        <span>Voting ends {formatDate(proposal.votingEnd)}</span>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(proposal.status)}`}>
+                      {proposal.status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Voting Progress */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Voting Progress</span>
+                      <span className="text-sm text-gray-500">
+                        {proposal.totalVotes} / {proposal.quorumThreshold} votes
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-4">
+                        <span className="text-green-600">Yes: {proposal.yesVotes} ({yesPercentage.toFixed(1)}%)</span>
+                        <span className="text-red-600">No: {proposal.noVotes} ({(100 - yesPercentage).toFixed(1)}%)</span>
+                      </div>
+                      <span className="text-gray-500">
+                        {progress.toFixed(1)}% of quorum
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Voting Buttons */}
+                  {votingActive && (
+                    <div className="flex items-center space-x-4">
+                      {proposal.userVote ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600">You voted:</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            proposal.userVote === 'yes' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {proposal.userVote === 'yes' ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleVote(proposal.id, 'yes')}
+                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            Vote Yes
+                          </button>
+                          <button
+                            onClick={() => handleVote(proposal.id, 'no')}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Vote No
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Results Summary */}
+                  {!votingActive && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-2">Final Results</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Total Votes:</span>
+                          <span className="ml-2 font-medium">{proposal.totalVotes}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Quorum Met:</span>
+                          <span className={`ml-2 font-medium ${
+                            proposal.totalVotes >= proposal.quorumThreshold 
+                              ? 'text-green-600' 
+                              : 'text-red-600'
+                          }`}>
+                            {proposal.totalVotes >= proposal.quorumThreshold ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Majority:</span>
+                          <span className={`ml-2 font-medium ${
+                            yesPercentage >= proposal.majorityThreshold 
+                              ? 'text-green-600' 
+                              : 'text-red-600'
+                          }`}>
+                            {yesPercentage >= proposal.majorityThreshold ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Outcome:</span>
+                          <span className={`ml-2 font-medium ${
+                            proposal.status === 'passed' 
+                              ? 'text-green-600' 
+                              : 'text-red-600'
+                          }`}>
+                            {proposal.status === 'passed' ? 'Passed' : 'Rejected'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-2xl font-bold mb-2">47</div>
-                  <div className="text-sm opacity-90">Proposals Passed</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold mb-2">94%</div>
-                  <div className="text-sm opacity-90">Implementation Rate</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
-  )
-}
+  );
+};
+
+export default GovernancePage;
