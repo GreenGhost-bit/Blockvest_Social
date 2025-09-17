@@ -25,6 +25,18 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Log error to external service in production
+    if (process.env.NODE_ENV === 'production') {
+      // In a real app, you would send this to an error reporting service
+      console.error('Production error:', {
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     this.setState({ error, errorInfo });
   }
 
@@ -59,6 +71,12 @@ class ErrorBoundary extends Component<Props, State> {
                   className="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
                 >
                   Try Again
+                </button>
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Go Home
                 </button>
               </div>
               {process.env.NODE_ENV === 'development' && this.state.error && (
