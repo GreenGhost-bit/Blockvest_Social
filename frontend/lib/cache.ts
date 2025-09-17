@@ -107,6 +107,111 @@ export class Cache<T> {
     return Array.from(this.cache.values()).map(item => item.value);
   }
 
+  entries(): Array<[string, T]> {
+    this.cleanup();
+    return Array.from(this.cache.entries()).map(([key, item]) => [key, item.value]);
+  }
+
+  forEach(callback: (value: T, key: string, cache: Cache<T>) => void): void {
+    this.cleanup();
+    this.cache.forEach((item, key) => {
+      callback(item.value, key, this);
+    });
+  }
+
+  map<U>(callback: (value: T, key: string) => U): U[] {
+    this.cleanup();
+    return Array.from(this.cache.entries()).map(([key, item]) => 
+      callback(item.value, key)
+    );
+  }
+
+  filter(predicate: (value: T, key: string) => boolean): Array<[string, T]> {
+    this.cleanup();
+    return Array.from(this.cache.entries())
+      .filter(([key, item]) => predicate(item.value, key))
+      .map(([key, item]) => [key, item.value]);
+  }
+
+  find(predicate: (value: T, key: string) => boolean): T | undefined {
+    this.cleanup();
+    for (const [key, item] of this.cache.entries()) {
+      if (predicate(item.value, key)) {
+        return item.value;
+      }
+    }
+    return undefined;
+  }
+
+  some(predicate: (value: T, key: string) => boolean): boolean {
+    this.cleanup();
+    for (const [key, item] of this.cache.entries()) {
+      if (predicate(item.value, key)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  every(predicate: (value: T, key: string) => boolean): boolean {
+    this.cleanup();
+    for (const [key, item] of this.cache.entries()) {
+      if (!predicate(item.value, key)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  reduce<U>(callback: (accumulator: U, value: T, key: string) => U, initialValue: U): U {
+    this.cleanup();
+    let accumulator = initialValue;
+    for (const [key, item] of this.cache.entries()) {
+      accumulator = callback(accumulator, item.value, key);
+    }
+    return accumulator;
+  }
+
+  getStats(): {
+    size: number;
+    hitRate: number;
+    missRate: number;
+    averageAge: number;
+    oldestItem: string | null;
+    newestItem: string | null;
+  } {
+    this.cleanup();
+    const now = Date.now();
+    const items = Array.from(this.cache.entries());
+    
+    if (items.length === 0) {
+      return {
+        size: 0,
+        hitRate: 0,
+        missRate: 0,
+        averageAge: 0,
+        oldestItem: null,
+        newestItem: null
+      };
+    }
+
+    const ages = items.map(([_, item]) => now - (item.expiry - this.options.ttl));
+    const averageAge = ages.reduce((sum, age) => sum + age, 0) / ages.length;
+    
+    const sortedByAge = items.sort((a, b) => a[1].expiry - b[1].expiry);
+    const oldestItem = sortedByAge[0][0];
+    const newestItem = sortedByAge[sortedByAge.length - 1][0];
+
+    return {
+      size: this.cache.size,
+      hitRate: 0, // Would need to track hits/misses
+      missRate: 0, // Would need to track hits/misses
+      averageAge,
+      oldestItem,
+      newestItem
+    };
+  }
+
   private cleanup(): void {
     const now = Date.now();
     for (const [key, item] of this.cache.entries()) {
@@ -275,6 +380,110 @@ export const warmCache = async <T>(
   });
   
   await Promise.all(promises);
+};
+
+// Cache middleware for React Query
+export const createCacheMiddleware = <T>(cache: Cache<T>) => {
+  return {
+    get: (key: string) => cache.get(key),
+    set: (key: string, value: T, metadata?: Record<string, any>) => cache.set(key, value, metadata),
+    has: (key: string) => cache.has(key),
+    delete: (key: string) => cache.delete(key),
+    clear: () => cache.clear(),
+    stats: () => cache.getStats()
+  };
+};
+
+// Cache persistence
+export const persistCache = <T>(cache: Cache<T>, storageKey: string): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const data = Array.from(cache.entries()).map(([key, value]) => ({
+      key,
+      value,
+      metadata: cache.get(key)?.metadata
+    }));
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Failed to persist cache:', error);
+  }
+};
+
+export const restoreCache = <T>(cache: Cache<T>, storageKey: string): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const data = localStorage.getItem(storageKey);
+    if (data) {
+      const items = JSON.parse(data);
+      items.forEach((item: any) => {
+        cache.set(item.key, item.value, item.metadata);
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to restore cache:', error);
+  }
+};
+
+// Cache compression
+export const compressCache = <T>(cache: Cache<T>): string => {
+  const data = Array.from(cache.entries()).map(([key, value]) => ({
+    key,
+    value,
+    metadata: cache.get(key)?.metadata
+  }));
+  return JSON.stringify(data);
+};
+
+export const decompressCache = <T>(cache: Cache<T>, compressedData: string): void => {
+  try {
+    const items = JSON.parse(compressedData);
+    items.forEach((item: any) => {
+      cache.set(item.key, item.value, item.metadata);
+    });
+  } catch (error) {
+    console.warn('Failed to decompress cache:', error);
+  }
+};
+
+// Cache synchronization
+export const syncCaches = <T>(source: Cache<T>, target: Cache<T>): void => {
+  source.forEach((value, key) => {
+    target.set(key, value);
+  });
+};
+
+// Cache health check
+export const checkCacheHealth = <T>(cache: Cache<T>): {
+  healthy: boolean;
+  issues: string[];
+  recommendations: string[];
+} => {
+  const stats = cache.getStats();
+  const issues: string[] = [];
+  const recommendations: string[] = [];
+
+  if (stats.size === 0) {
+    issues.push('Cache is empty');
+    recommendations.push('Consider warming the cache with frequently accessed data');
+  }
+
+  if (stats.averageAge > 3600000) { // 1 hour
+    issues.push('Cache items are old');
+    recommendations.push('Consider reducing TTL or implementing cache refresh');
+  }
+
+  if (stats.size > 1000) {
+    issues.push('Cache is large');
+    recommendations.push('Consider reducing maxSize or implementing more aggressive eviction');
+  }
+
+  return {
+    healthy: issues.length === 0,
+    issues,
+    recommendations
+  };
 };
 
 export default Cache;
