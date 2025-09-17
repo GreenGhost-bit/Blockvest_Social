@@ -191,7 +191,7 @@ const ExplorePage: React.FC = () => {
                 </div>
               </div>
             </div>
-          )          )}
+          ))}
         </div>
         
         {/* Risk Details Modal */}
