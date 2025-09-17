@@ -344,6 +344,302 @@ export const parseQueryString = (queryString: string): Record<string, string> =>
   return result;
 };
 
+// Time utilities
+export const getTimeAgo = (date: string | Date): string => {
+  const now = new Date();
+  const past = typeof date === 'string' ? new Date(date) : date;
+  const diffInMs = now.getTime() - past.getTime();
+  const diffInSeconds = Math.floor(diffInMs / 1000);
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  const diffInMonths = Math.floor(diffInDays / 30);
+  const diffInYears = Math.floor(diffInDays / 365);
+
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+  if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+  if (diffInWeeks < 4) return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
+  if (diffInMonths < 12) return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+  return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`;
+};
+
+export const isToday = (date: string | Date): boolean => {
+  const today = new Date();
+  const targetDate = typeof date === 'string' ? new Date(date) : date;
+  return today.toDateString() === targetDate.toDateString();
+};
+
+export const isYesterday = (date: string | Date): boolean => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const targetDate = typeof date === 'string' ? new Date(date) : date;
+  return yesterday.toDateString() === targetDate.toDateString();
+};
+
+export const isThisWeek = (date: string | Date): boolean => {
+  const now = new Date();
+  const targetDate = typeof date === 'string' ? new Date(date) : date;
+  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+  const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+  return targetDate >= startOfWeek && targetDate <= endOfWeek;
+};
+
+// Array utilities
+export const shuffle = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+export const sample = <T>(array: T[], count: number = 1): T[] => {
+  const shuffled = shuffle(array);
+  return shuffled.slice(0, count);
+};
+
+export const flatten = <T>(array: T[][]): T[] => {
+  return array.reduce((flat, item) => flat.concat(item), []);
+};
+
+export const intersection = <T>(array1: T[], array2: T[]): T[] => {
+  return array1.filter(item => array2.includes(item));
+};
+
+export const difference = <T>(array1: T[], array2: T[]): T[] => {
+  return array1.filter(item => !array2.includes(item));
+};
+
+export const union = <T>(array1: T[], array2: T[]): T[] => {
+  return [...new Set([...array1, ...array2])];
+};
+
+// Object utilities
+export const isEmpty = (obj: any): boolean => {
+  if (obj == null) return true;
+  if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0;
+  if (typeof obj === 'object') return Object.keys(obj).length === 0;
+  return false;
+};
+
+export const hasOwnProperty = <T extends object, K extends PropertyKey>(
+  obj: T,
+  prop: K
+): obj is T & Record<K, unknown> => {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+};
+
+export const merge = <T extends Record<string, any>>(target: T, ...sources: Partial<T>[]): T => {
+  return sources.reduce((merged, source) => {
+    Object.keys(source).forEach(key => {
+      if (source[key] !== undefined) {
+        merged[key] = source[key];
+      }
+    });
+    return merged;
+  }, { ...target });
+};
+
+export const deepMerge = <T extends Record<string, any>>(target: T, source: Partial<T>): T => {
+  const result = { ...target };
+  
+  Object.keys(source).forEach(key => {
+    if (source[key] !== undefined) {
+      if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
+        result[key] = deepMerge(result[key] || {}, source[key] as any);
+      } else {
+        result[key] = source[key] as any;
+      }
+    }
+  });
+  
+  return result;
+};
+
+// String utilities
+export const escapeHtml = (str: string): string => {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+};
+
+export const unescapeHtml = (str: string): string => {
+  const div = document.createElement('div');
+  div.innerHTML = str;
+  return div.textContent || div.innerText || '';
+};
+
+export const stripHtml = (str: string): string => {
+  const div = document.createElement('div');
+  div.innerHTML = str;
+  return div.textContent || div.innerText || '';
+};
+
+export const generateId = (length: number = 8): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+export const generateUuid = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+// Number utilities
+export const formatBytes = (bytes: number, decimals: number = 2): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+export const formatNumberWithCommas = (num: number): string => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+export const calculatePercentage = (value: number, total: number): number => {
+  if (total === 0) return 0;
+  return (value / total) * 100;
+};
+
+export const calculateGrowthRate = (current: number, previous: number): number => {
+  if (previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+};
+
+// Validation utilities
+export const isNumeric = (value: any): boolean => {
+  return !isNaN(parseFloat(value)) && isFinite(value);
+};
+
+export const isInteger = (value: any): boolean => {
+  return Number.isInteger(Number(value));
+};
+
+export const isPositive = (value: number): boolean => {
+  return value > 0;
+};
+
+export const isNegative = (value: number): boolean => {
+  return value < 0;
+};
+
+export const isZero = (value: number): boolean => {
+  return value === 0;
+};
+
+// Color utilities
+export const generateRandomColor = (): string => {
+  return `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+};
+
+export const lightenColor = (hex: string, percent: number): string => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  
+  const r = Math.min(255, Math.floor(rgb.r + (255 - rgb.r) * percent / 100));
+  const g = Math.min(255, Math.floor(rgb.g + (255 - rgb.g) * percent / 100));
+  const b = Math.min(255, Math.floor(rgb.b + (255 - rgb.b) * percent / 100));
+  
+  return rgbToHex(r, g, b);
+};
+
+export const darkenColor = (hex: string, percent: number): string => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  
+  const r = Math.max(0, Math.floor(rgb.r * (1 - percent / 100)));
+  const g = Math.max(0, Math.floor(rgb.g * (1 - percent / 100)));
+  const b = Math.max(0, Math.floor(rgb.b * (1 - percent / 100)));
+  
+  return rgbToHex(r, g, b);
+};
+
+// Local storage utilities
+export const clearLocalStorage = (): void => {
+  try {
+    localStorage.clear();
+  } catch (error) {
+    console.error('Failed to clear localStorage:', error);
+  }
+};
+
+export const getLocalStorageSize = (): number => {
+  let total = 0;
+  for (const key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+      total += localStorage[key].length + key.length;
+    }
+  }
+  return total;
+};
+
+// Browser utilities
+export const isMobile = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
+export const isTablet = (): boolean => {
+  return /iPad|Android/i.test(navigator.userAgent) && window.innerWidth >= 768;
+};
+
+export const isDesktop = (): boolean => {
+  return !isMobile() && !isTablet();
+};
+
+export const getBrowserInfo = (): { name: string; version: string } => {
+  const ua = navigator.userAgent;
+  let browserName = 'Unknown';
+  let browserVersion = 'Unknown';
+  
+  if (ua.indexOf('Chrome') > -1) {
+    browserName = 'Chrome';
+    browserVersion = ua.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
+  } else if (ua.indexOf('Firefox') > -1) {
+    browserName = 'Firefox';
+    browserVersion = ua.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
+  } else if (ua.indexOf('Safari') > -1) {
+    browserName = 'Safari';
+    browserVersion = ua.match(/Version\/(\d+)/)?.[1] || 'Unknown';
+  } else if (ua.indexOf('Edge') > -1) {
+    browserName = 'Edge';
+    browserVersion = ua.match(/Edge\/(\d+)/)?.[1] || 'Unknown';
+  }
+  
+  return { name: browserName, version: browserVersion };
+};
+
+// Helper function for hex to RGB conversion
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+};
+
+// Helper function for RGB to hex conversion
+const rgbToHex = (r: number, g: number, b: number): string => {
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
+
 export default {
   formatDate,
   formatRelativeTime,
