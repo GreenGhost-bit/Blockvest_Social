@@ -51,6 +51,21 @@ const ReputationPage: React.FC = () => {
   const fetchReputationData = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cacheKey = 'reputation_data';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 10 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 600000) {
+        const cached = JSON.parse(cachedData);
+        setReputationData(cached);
+        setLoading(false);
+        return;
+      }
+      
       // Mock reputation data - replace with actual API call
       const mockData: ReputationData = {
         overallScore: 85,
@@ -150,9 +165,58 @@ const ReputationPage: React.FC = () => {
         ]
       };
       
-      setReputationData(mockData);
+      // Validate and sanitize data
+      const validatedData = {
+        ...mockData,
+        overallScore: Math.max(0, Math.min(100, mockData.overallScore)),
+        level: ['bronze', 'silver', 'gold', 'platinum', 'diamond'].includes(mockData.level)
+          ? mockData.level
+          : 'bronze' as ReputationData['level'],
+        totalInvestments: Math.max(0, mockData.totalInvestments),
+        successfulInvestments: Math.max(0, mockData.successfulInvestments),
+        totalAmountInvested: Math.max(0, mockData.totalAmountInvested),
+        totalAmountRepaid: Math.max(0, mockData.totalAmountRepaid),
+        onTimeRepayments: Math.max(0, mockData.onTimeRepayments),
+        lateRepayments: Math.max(0, mockData.lateRepayments),
+        defaultedInvestments: Math.max(0, mockData.defaultedInvestments),
+        socialScore: Math.max(0, Math.min(100, mockData.socialScore)),
+        verificationScore: Math.max(0, Math.min(100, mockData.verificationScore)),
+        history: mockData.history.map(item => ({
+          ...item,
+          id: item.id.trim(),
+          type: ['investment', 'repayment', 'verification', 'social'].includes(item.type)
+            ? item.type
+            : 'investment' as ReputationData['history'][0]['type'],
+          description: item.description.trim(),
+          scoreChange: Math.max(-100, Math.min(100, item.scoreChange)),
+          timestamp: item.timestamp
+        })),
+        achievements: mockData.achievements.map(achievement => ({
+          ...achievement,
+          id: achievement.id.trim(),
+          name: achievement.name.trim(),
+          description: achievement.description.trim(),
+          icon: achievement.icon.trim(),
+          unlockedAt: achievement.unlockedAt
+        })),
+        nextMilestones: mockData.nextMilestones.map(milestone => ({
+          ...milestone,
+          requirement: milestone.requirement.trim(),
+          reward: milestone.reward.trim(),
+          progress: Math.max(0, Math.min(100, milestone.progress))
+        }))
+      };
+      
+      setReputationData(validatedData);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify(validatedData));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (error) {
       console.error('Failed to fetch reputation data:', error);
+      // Set fallback data on error
+      setReputationData(null);
     } finally {
       setLoading(false);
     }
@@ -247,8 +311,22 @@ const ReputationPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Reputation & Social Score</h1>
-          <p className="text-gray-600 mt-2">Track your investment performance and social standing</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Reputation & Social Score</h1>
+              <p className="text-gray-600 mt-2">Track your investment performance and social standing</p>
+            </div>
+            <button
+              onClick={fetchReputationData}
+              disabled={loading}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Reputation Overview */}
