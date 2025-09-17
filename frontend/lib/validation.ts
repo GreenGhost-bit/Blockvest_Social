@@ -96,6 +96,76 @@ export class Validator {
     return this;
   }
 
+  array(value: any[], fieldName: string, message?: string): this {
+    if (!Array.isArray(value)) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must be an array`
+      });
+    }
+    return this;
+  }
+
+  arrayMinLength(value: any[], minLength: number, fieldName: string, message?: string): this {
+    if (Array.isArray(value) && value.length < minLength) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must have at least ${minLength} items`
+      });
+    }
+    return this;
+  }
+
+  arrayMaxLength(value: any[], maxLength: number, fieldName: string, message?: string): this {
+    if (Array.isArray(value) && value.length > maxLength) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must have no more than ${maxLength} items`
+      });
+    }
+    return this;
+  }
+
+  oneOf(value: any, options: any[], fieldName: string, message?: string): this {
+    if (value && !options.includes(value)) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must be one of: ${options.join(', ')}`
+      });
+    }
+    return this;
+  }
+
+  date(value: string, fieldName: string, message?: string): this {
+    if (value && isNaN(Date.parse(value))) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must be a valid date`
+      });
+    }
+    return this;
+  }
+
+  futureDate(value: string, fieldName: string, message?: string): this {
+    if (value && new Date(value) <= new Date()) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must be a future date`
+      });
+    }
+    return this;
+  }
+
+  pastDate(value: string, fieldName: string, message?: string): this {
+    if (value && new Date(value) >= new Date()) {
+      this.errors.push({
+        field: fieldName,
+        message: message || `${fieldName} must be a past date`
+      });
+    }
+    return this;
+  }
+
   getResult(): ValidationResult {
     return {
       isValid: this.errors.length === 0,
@@ -115,7 +185,13 @@ export const patterns = {
   phone: /^\+?[\d\s\-\(\)]+$/,
   url: /^https?:\/\/.+/,
   alphanumeric: /^[a-zA-Z0-9]+$/,
-  password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+  password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+  uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  creditCard: /^[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4}$/,
+  ssn: /^\d{3}-?\d{2}-?\d{4}$/,
+  zipCode: /^\d{5}(-\d{4})?$/,
+  currency: /^\d+(\.\d{2})?$/,
+  percentage: /^(100(\.0{1,2})?|[0-9]{1,2}(\.[0-9]{1,2})?)$/
 };
 
 // Validation schemas for common forms
@@ -193,6 +269,62 @@ export const schemas = {
       .required(data.description, 'description')
       .minLength(data.description, 100, 'description')
       .maxLength(data.description, 5000, 'description')
+      .getResult();
+  },
+
+  riskAssessment: (data: any) => {
+    const validator = new Validator();
+    return validator
+      .required(data.overallScore, 'overallScore')
+      .min(data.overallScore, 0, 'overallScore')
+      .max(data.overallScore, 100, 'overallScore')
+      .required(data.riskLevel, 'riskLevel')
+      .oneOf(data.riskLevel, ['low', 'medium', 'high'], 'riskLevel')
+      .required(data.factors, 'factors')
+      .array(data.factors, 'factors')
+      .arrayMinLength(data.factors, 1, 'factors')
+      .getResult();
+  },
+
+  notification: (data: any) => {
+    const validator = new Validator();
+    return validator
+      .required(data.type, 'type')
+      .oneOf(data.type, ['investment', 'payment', 'system', 'security'], 'type')
+      .required(data.title, 'title')
+      .minLength(data.title, 5, 'title')
+      .maxLength(data.title, 100, 'title')
+      .required(data.message, 'message')
+      .minLength(data.message, 10, 'message')
+      .maxLength(data.message, 500, 'message')
+      .required(data.timestamp, 'timestamp')
+      .date(data.timestamp, 'timestamp')
+      .getResult();
+  },
+
+  marketplaceItem: (data: any) => {
+    const validator = new Validator();
+    return validator
+      .required(data.type, 'type')
+      .oneOf(data.type, ['investment', 'service', 'product'], 'type')
+      .required(data.title, 'title')
+      .minLength(data.title, 5, 'title')
+      .maxLength(data.title, 200, 'title')
+      .required(data.description, 'description')
+      .minLength(data.description, 20, 'description')
+      .maxLength(data.description, 1000, 'description')
+      .required(data.price, 'price')
+      .min(data.price, 0, 'price')
+      .max(data.price, 1000000, 'price')
+      .required(data.currency, 'currency')
+      .oneOf(data.currency, ['USD', 'EUR', 'GBP', 'JPY'], 'currency')
+      .required(data.category, 'category')
+      .minLength(data.category, 2, 'category')
+      .maxLength(data.category, 50, 'category')
+      .required(data.tags, 'tags')
+      .array(data.tags, 'tags')
+      .arrayMinLength(data.tags, 1, 'tags')
+      .arrayMaxLength(data.tags, 10, 'tags')
       .getResult();
   }
 };
