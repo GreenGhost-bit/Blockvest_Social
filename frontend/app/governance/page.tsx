@@ -39,6 +39,21 @@ const GovernancePage: React.FC = () => {
   const fetchProposals = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cacheKey = 'governance_proposals';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 5 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+        const cachedProposals = JSON.parse(cachedData);
+        setProposals(cachedProposals);
+        setLoading(false);
+        return;
+      }
+      
       // Mock proposals - replace with actual API call
       const mockProposals: Proposal[] = [
         {
@@ -107,9 +122,39 @@ const GovernancePage: React.FC = () => {
         }
       ];
       
-      setProposals(mockProposals);
+      // Validate and sanitize proposals
+      const validatedProposals = mockProposals.map(proposal => ({
+        ...proposal,
+        id: proposal.id.trim(),
+        title: proposal.title.trim(),
+        description: proposal.description.trim(),
+        creator: proposal.creator.trim(),
+        status: ['draft', 'active', 'passed', 'rejected', 'expired'].includes(proposal.status) 
+          ? proposal.status 
+          : 'draft' as 'draft' | 'active' | 'passed' | 'rejected' | 'expired',
+        createdAt: proposal.createdAt,
+        votingStart: proposal.votingStart,
+        votingEnd: proposal.votingEnd,
+        yesVotes: Math.max(0, proposal.yesVotes),
+        noVotes: Math.max(0, proposal.noVotes),
+        totalVotes: Math.max(0, proposal.totalVotes),
+        quorumThreshold: Math.max(0, proposal.quorumThreshold),
+        majorityThreshold: Math.max(0, Math.min(100, proposal.majorityThreshold)),
+        userVote: proposal.userVote && ['yes', 'no'].includes(proposal.userVote) 
+          ? proposal.userVote 
+          : undefined
+      }));
+      
+      setProposals(validatedProposals);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify(validatedProposals));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (error) {
       console.error('Failed to fetch proposals:', error);
+      // Set fallback data on error
+      setProposals([]);
     } finally {
       setLoading(false);
     }
@@ -117,13 +162,35 @@ const GovernancePage: React.FC = () => {
 
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    if (!newProposal.title.trim()) {
+      alert('Please enter a proposal title');
+      return;
+    }
+    
+    if (!newProposal.description.trim()) {
+      alert('Please enter a proposal description');
+      return;
+    }
+    
+    if (newProposal.title.trim().length < 10) {
+      alert('Proposal title must be at least 10 characters long');
+      return;
+    }
+    
+    if (newProposal.description.trim().length < 50) {
+      alert('Proposal description must be at least 50 characters long');
+      return;
+    }
+    
     try {
       setLoading(true);
       // Mock proposal creation - replace with actual API call
       const proposal: Proposal = {
         id: Date.now().toString(),
-        title: newProposal.title,
-        description: newProposal.description,
+        title: newProposal.title.trim(),
+        description: newProposal.description.trim(),
         creator: 'Current User',
         status: 'draft',
         createdAt: new Date().toISOString(),
@@ -136,11 +203,20 @@ const GovernancePage: React.FC = () => {
         majorityThreshold: 51
       };
       
-      setProposals(prev => [proposal, ...prev]);
+      const updatedProposals = [proposal, ...proposals];
+      setProposals(updatedProposals);
+      
+      // Update cache
+      localStorage.setItem('governance_proposals', JSON.stringify(updatedProposals));
+      localStorage.setItem('governance_proposals_time', Date.now().toString());
+      
       setNewProposal({ title: '', description: '' });
       setShowCreateForm(false);
+      
+      alert('Proposal created successfully!');
     } catch (error) {
       console.error('Failed to create proposal:', error);
+      alert('Failed to create proposal. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -217,12 +293,24 @@ const GovernancePage: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900">Governance</h1>
               <p className="text-gray-600 mt-2">Participate in platform governance and decision making</p>
             </div>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              Create Proposal
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={fetchProposals}
+                disabled={loading}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Create Proposal
+              </button>
+            </div>
           </div>
         </div>
 
