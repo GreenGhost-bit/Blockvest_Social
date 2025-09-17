@@ -44,6 +44,21 @@ const MarketplacePage: React.FC = () => {
   const fetchMarketplaceItems = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cacheKey = `marketplace_${selectedCategory}_${sortBy}_${priceRange.min}_${priceRange.max}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 5 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+        const cachedItems = JSON.parse(cachedData);
+        setMarketplaceItems(cachedItems);
+        setLoading(false);
+        return;
+      }
+      
       // Mock marketplace data - replace with actual API call
       const mockItems: MarketplaceItem[] = [
         {
@@ -180,9 +195,46 @@ const MarketplacePage: React.FC = () => {
         }
       ];
       
-      setMarketplaceItems(mockItems);
+      // Validate and sanitize data
+      const validatedItems = mockItems.map(item => ({
+        ...item,
+        id: item.id.trim(),
+        type: ['investment', 'service', 'product'].includes(item.type)
+          ? item.type
+          : 'product' as MarketplaceItem['type'],
+        title: item.title.trim(),
+        description: item.description.trim(),
+        price: Math.max(0, item.price),
+        currency: item.currency.trim().toUpperCase(),
+        seller: {
+          ...item.seller,
+          name: item.seller.name.trim(),
+          reputation: Math.max(0, Math.min(100, item.seller.reputation)),
+          verified: Boolean(item.seller.verified),
+          location: item.seller.location.trim()
+        },
+        category: item.category.trim(),
+        tags: item.tags.map(tag => tag.trim()).filter(tag => tag.length > 0),
+        rating: Math.max(0, Math.min(5, item.rating)),
+        reviewCount: Math.max(0, item.reviewCount),
+        imageUrl: item.imageUrl.trim(),
+        createdAt: item.createdAt,
+        status: ['active', 'sold', 'expired'].includes(item.status)
+          ? item.status
+          : 'active' as MarketplaceItem['status'],
+        features: item.features.map(feature => feature.trim()).filter(feature => feature.length > 0)
+      }));
+      
+      setMarketplaceItems(validatedItems);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify(validatedItems));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (error) {
       console.error('Failed to fetch marketplace items:', error);
+      // Set fallback data on error
+      setMarketplaceItems([]);
     } finally {
       setLoading(false);
     }
@@ -285,8 +337,22 @@ const MarketplacePage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
-          <p className="text-gray-600 mt-2">Discover investment opportunities, services, and products</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
+              <p className="text-gray-600 mt-2">Discover investment opportunities, services, and products</p>
+            </div>
+            <button
+              onClick={fetchMarketplaceItems}
+              disabled={loading}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Search and Filters */}
