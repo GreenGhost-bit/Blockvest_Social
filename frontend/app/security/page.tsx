@@ -46,6 +46,22 @@ const SecurityPage: React.FC = () => {
   const fetchSecurityData = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cacheKey = 'security_data';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      
+      // Use cached data if it's less than 5 minutes old
+      if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+        const cached = JSON.parse(cachedData);
+        setSecuritySettings(cached.settings);
+        setSecurityEvents(cached.events);
+        setLoading(false);
+        return;
+      }
+      
       // Mock security data - replace with actual API call
       const mockSettings: SecuritySettings = {
         twoFactorEnabled: false,
@@ -111,10 +127,55 @@ const SecurityPage: React.FC = () => {
         }
       ];
 
-      setSecuritySettings(mockSettings);
-      setSecurityEvents(mockEvents);
+      // Validate and sanitize data
+      const validatedSettings = {
+        ...mockSettings,
+        twoFactorEnabled: Boolean(mockSettings.twoFactorEnabled),
+        emailNotifications: Boolean(mockSettings.emailNotifications),
+        smsNotifications: Boolean(mockSettings.smsNotifications),
+        loginAlerts: Boolean(mockSettings.loginAlerts),
+        deviceManagement: Boolean(mockSettings.deviceManagement),
+        lastPasswordChange: mockSettings.lastPasswordChange,
+        activeSessions: mockSettings.activeSessions.map(session => ({
+          ...session,
+          id: session.id.trim(),
+          device: session.device.trim(),
+          location: session.location.trim(),
+          lastActive: session.lastActive,
+          current: Boolean(session.current)
+        }))
+      };
+
+      const validatedEvents = mockEvents.map(event => ({
+        ...event,
+        id: event.id.trim(),
+        type: ['login', 'password_change', '2fa_enabled', 'device_added', 'suspicious_activity'].includes(event.type)
+          ? event.type
+          : 'login' as SecurityEvent['type'],
+        description: event.description.trim(),
+        timestamp: event.timestamp,
+        ip: event.ip.trim(),
+        location: event.location.trim(),
+        status: ['success', 'failed', 'warning'].includes(event.status)
+          ? event.status
+          : 'success' as SecurityEvent['status']
+      }));
+
+      setSecuritySettings(validatedSettings);
+      setSecurityEvents(validatedEvents);
+      
+      // Cache the validated data
+      localStorage.setItem(cacheKey, JSON.stringify({
+        settings: validatedSettings,
+        events: validatedEvents
+      }));
+      localStorage.setItem(`${cacheKey}_time`, now.toString());
+      
     } catch (error) {
       console.error('Failed to fetch security data:', error);
+      // Set fallback data on error
+      setSecuritySettings(null);
+      setSecurityEvents([]);
     } finally {
       setLoading(false);
     }
@@ -123,10 +184,31 @@ const SecurityPage: React.FC = () => {
   const handleSettingChange = async (setting: keyof SecuritySettings, value: boolean) => {
     try {
       setLoading(true);
+      
+      // Validate setting key
+      const validSettings = ['twoFactorEnabled', 'emailNotifications', 'smsNotifications', 'loginAlerts', 'deviceManagement'];
+      if (!validSettings.includes(setting)) {
+        console.error('Invalid setting key:', setting);
+        return;
+      }
+      
       // Mock API call - replace with actual implementation
-      setSecuritySettings(prev => prev ? { ...prev, [setting]: value } : null);
+      const updatedSettings = securitySettings ? { ...securitySettings, [setting]: value } : null;
+      setSecuritySettings(updatedSettings);
+      
+      // Update cache
+      if (updatedSettings) {
+        localStorage.setItem('security_data', JSON.stringify({
+          settings: updatedSettings,
+          events: securityEvents
+        }));
+        localStorage.setItem('security_data_time', Date.now().toString());
+      }
+      
+      alert(`Setting updated successfully!`);
     } catch (error) {
       console.error('Failed to update setting:', error);
+      alert('Failed to update setting. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -248,8 +330,22 @@ const SecurityPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Security Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your account security and privacy settings</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Security Settings</h1>
+              <p className="text-gray-600 mt-2">Manage your account security and privacy settings</p>
+            </div>
+            <button
+              onClick={fetchSecurityData}
+              disabled={loading}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
 
         {securitySettings && (
