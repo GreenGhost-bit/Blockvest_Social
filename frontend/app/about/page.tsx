@@ -32,7 +32,7 @@ const AboutPage: React.FC = () => {
         <div className="text-center mb-16">
           <h1 className="text-4xl font-bold text-gray-900 mb-6">About Blockvest Social</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            A decentralized social investment platform built on Algorand blockchain, 
+            A decentralized social investment platform built on the Algorand blockchain, 
             enabling peer-to-peer lending and investment opportunities for individuals 
             without formal credit history.
           </p>
@@ -280,10 +280,10 @@ const AboutPage: React.FC = () => {
               Join thousands of users who are already building their financial future with Blockvest Social
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+              <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors" aria-label="Start investing on Blockvest Social">
                 Start Investing
               </button>
-              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors" aria-label="Learn more about Blockvest Social">
                 Learn More
               </button>
             </div>
