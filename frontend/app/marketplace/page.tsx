@@ -366,6 +366,7 @@ const MarketplacePage: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Search items, categories, or tags..."
+                aria-label="Search marketplace items"
               />
             </div>
             <div>
@@ -374,6 +375,7 @@ const MarketplacePage: React.FC = () => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Filter by category"
               >
                 <option value="all">All Categories</option>
                 <option value="real-estate">Real Estate</option>
@@ -388,6 +390,7 @@ const MarketplacePage: React.FC = () => {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Sort results"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -436,7 +439,7 @@ const MarketplacePage: React.FC = () => {
 
         {/* Results */}
         {loading ? (
-          <div className="text-center py-12">
+          <div className="text-center py-12" role="status" aria-live="polite">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading marketplace items...</p>
           </div>
