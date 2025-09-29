@@ -316,14 +316,15 @@ const GovernancePage: React.FC = () => {
 
         {/* Create Proposal Modal */}
         {showCreateForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-proposal-title">
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">Create New Proposal</h2>
+                  <h2 id="create-proposal-title" className="text-xl font-semibold text-gray-900">Create New Proposal</h2>
                   <button
                     onClick={() => setShowCreateForm(false)}
                     className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close create proposal"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -342,6 +343,8 @@ const GovernancePage: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter a clear, concise title for your proposal"
                       required
+                      aria-required="true"
+                      aria-label="Proposal title"
                     />
                   </div>
                   <div>
@@ -355,6 +358,8 @@ const GovernancePage: React.FC = () => {
                       rows={6}
                       placeholder="Provide a detailed description of your proposal, including the rationale and expected impact"
                       required
+                      aria-required="true"
+                      aria-label="Proposal description"
                     />
                   </div>
                   <div className="flex space-x-4">
@@ -362,6 +367,7 @@ const GovernancePage: React.FC = () => {
                       type="submit"
                       disabled={loading}
                       className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Create proposal"
                     >
                       {loading ? 'Creating...' : 'Create Proposal'}
                     </button>
@@ -369,6 +375,7 @@ const GovernancePage: React.FC = () => {
                       type="button"
                       onClick={() => setShowCreateForm(false)}
                       className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-400"
+                      aria-label="Cancel and close"
                     >
                       Cancel
                     </button>
