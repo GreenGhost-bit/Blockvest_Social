@@ -317,7 +317,7 @@ const SecurityPage: React.FC = () => {
 
   if (loading && !securitySettings) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" role="status" aria-live="polite">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading security settings...</p>
@@ -537,14 +537,15 @@ const SecurityPage: React.FC = () => {
 
         {/* 2FA Setup Modal */}
         {show2FASetup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="twofa-title">
             <div className="bg-white rounded-lg max-w-md w-full">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">Setup Two-Factor Authentication</h2>
+                  <h2 id="twofa-title" className="text-xl font-semibold text-gray-900">Setup Two-Factor Authentication</h2>
                   <button
                     onClick={() => setShow2FASetup(false)}
                     className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close two factor setup"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -580,12 +581,14 @@ const SecurityPage: React.FC = () => {
                       onClick={handle2FASetup}
                       disabled={loading || twoFactorCode.length !== 6}
                       className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Complete two factor setup"
                     >
                       {loading ? 'Setting up...' : 'Complete Setup'}
                     </button>
                     <button
                       onClick={() => setShow2FASetup(false)}
                       className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-400"
+                      aria-label="Cancel two factor setup"
                     >
                       Cancel
                     </button>
