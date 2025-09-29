@@ -114,7 +114,7 @@ const ExplorePage: React.FC = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Explore Investment Opportunities</h1>
           <p className="text-lg text-gray-600">
-            Support entrepreneurs and individuals who need funding for their goals
+            Discover and support entrepreneurs and individuals seeking funding for their goals
           </p>
         </div>
 
@@ -185,8 +185,9 @@ const ExplorePage: React.FC = () => {
                   <button 
                     onClick={() => handleViewRiskDetails(investment)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                    aria-label={`View risk details for ${investment.purpose}`}
                   >
-                    Risk
+                    View Risk
                   </button>
                 </div>
               </div>
@@ -208,6 +209,7 @@ const ExplorePage: React.FC = () => {
                     setSelectedInvestment(null);
                   }}
                   className="text-gray-400 hover:text-gray-600"
+                  aria-label="Close risk details"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
