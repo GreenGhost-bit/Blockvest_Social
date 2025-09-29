@@ -200,16 +200,18 @@ const Footer: React.FC = () => {
             <p className="text-gray-400 text-sm mb-4">
               Get the latest updates on new features and community stories.
             </p>
-            <div className="flex">
+            <form className="flex" role="form" aria-label="Newsletter subscription">
               <input
                 type="email"
                 placeholder="Enter your email"
                 className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-l-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Email address"
+                required
               />
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Subscribe to newsletter" type="submit">
                 Subscribe
               </button>
-            </div>
+            </form>
           </div>
         </div>
 
