@@ -244,11 +244,15 @@ const Search: React.FC<SearchProps> = ({
           onFocus={() => query.length >= 2 && setShowResults(true)}
           placeholder={placeholder}
           className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+          aria-label="Search"
+          aria-controls="search-results-panel"
+          aria-expanded={showResults && query.length >= 2}
         />
         {query && (
           <button
             onClick={handleClearSearch}
             className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            aria-label="Clear search"
           >
             <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
           </button>
@@ -257,14 +261,14 @@ const Search: React.FC<SearchProps> = ({
 
       {/* Search Results */}
       {showResults && (query.length >= 2) && (
-        <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+        <div id="search-results-panel" className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto" role="listbox" aria-label="Search results" aria-live="polite">
           {isSearching ? (
-            <div className="p-4 text-center">
+            <div className="p-4 text-center" role="status" aria-live="polite">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-sm text-gray-500">Searching...</p>
             </div>
           ) : results.length === 0 ? (
-            <div className="p-4 text-center">
+            <div className="p-4 text-center" role="status" aria-live="polite">
               <MagnifyingGlassIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
               <p className="text-gray-500">No results found</p>
               <p className="text-sm text-gray-400">Try different keywords</p>
@@ -278,6 +282,8 @@ const Search: React.FC<SearchProps> = ({
                   className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
                     index === activeIndex ? 'bg-blue-50' : ''
                   }`}
+                  role="option"
+                  aria-selected={index === activeIndex}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
