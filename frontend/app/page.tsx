@@ -79,12 +79,14 @@ const HomePage: React.FC = () => {
               <Link
                 href="/explore"
                 className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors"
+                aria-label="Explore investment opportunities"
               >
                 Explore Investments
               </Link>
               <Link
                 href="/about"
                 className="bg-white text-gray-900 px-8 py-3 rounded-lg text-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+                aria-label="Learn more about Blockvest Social"
               >
                 Learn More
               </Link>
