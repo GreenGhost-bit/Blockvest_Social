@@ -166,7 +166,7 @@ const RiskAnalyticsPage: React.FC = () => {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert" aria-live="assertive">
             <p>{error}</p>
             <button
               onClick={fetchAnalytics}
