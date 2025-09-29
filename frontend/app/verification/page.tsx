@@ -321,14 +321,15 @@ const VerificationPage: React.FC = () => {
 
         {/* Upload Document Modal */}
         {showUploadForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="upload-doc-title">
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">Upload Document</h2>
+                  <h2 id="upload-doc-title" className="text-xl font-semibold text-gray-900">Upload Document</h2>
                   <button
                     onClick={() => setShowUploadForm(false)}
                     className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close upload document"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -363,6 +364,7 @@ const VerificationPage: React.FC = () => {
                       onChange={(e) => setUploadData({ ...uploadData, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g., Driver License, Passport, etc."
+                      aria-label="Document name"
                     />
                   </div>
                   <div>
@@ -401,6 +403,7 @@ const VerificationPage: React.FC = () => {
                       type="submit"
                       disabled={loading || !selectedFile}
                       className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Upload selected document"
                     >
                       {loading ? 'Uploading...' : 'Upload Document'}
                     </button>
@@ -408,6 +411,7 @@ const VerificationPage: React.FC = () => {
                       type="button"
                       onClick={() => setShowUploadForm(false)}
                       className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-400"
+                      aria-label="Cancel upload"
                     >
                       Cancel
                     </button>
