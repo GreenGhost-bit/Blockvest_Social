@@ -199,6 +199,8 @@ const InvestmentsPage: React.FC = () => {
                     onChange={(e) => setNewInvestment({ ...newInvestment, amount: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    aria-required="true"
+                    aria-label="Amount in ALGO"
                   />
                 </div>
                 <div>
@@ -214,6 +216,8 @@ const InvestmentsPage: React.FC = () => {
                     onChange={(e) => setNewInvestment({ ...newInvestment, interestRate: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    aria-required="true"
+                    aria-label="Interest rate percentage"
                   />
                 </div>
                 <div>
@@ -228,6 +232,8 @@ const InvestmentsPage: React.FC = () => {
                     onChange={(e) => setNewInvestment({ ...newInvestment, duration: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    aria-required="true"
+                    aria-label="Duration in days"
                   />
                 </div>
                 <div>
@@ -242,6 +248,8 @@ const InvestmentsPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g., Business expansion, Education, Emergency fund"
                     required
+                    aria-required="true"
+                    aria-label="Investment purpose"
                   />
                 </div>
               </div>
@@ -255,6 +263,7 @@ const InvestmentsPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                   placeholder="Provide more details about your investment request..."
+                  aria-label="Investment description"
                 />
               </div>
               <div className="flex space-x-4">
@@ -262,6 +271,7 @@ const InvestmentsPage: React.FC = () => {
                   type="submit"
                   disabled={loading}
                   className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Create investment"
                 >
                   {loading ? 'Creating...' : 'Create Investment'}
                 </button>
@@ -269,6 +279,7 @@ const InvestmentsPage: React.FC = () => {
                   type="button"
                   onClick={() => setShowCreateForm(false)}
                   className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-400"
+                  aria-label="Cancel and close"
                 >
                   Cancel
                 </button>
