@@ -117,6 +117,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  aria-haspopup="menu"
+                  aria-expanded={isUserMenuOpen}
+                  aria-label="Open user menu"
                 >
                   {user.profilePicture ? (
                     <img
@@ -203,6 +206,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label={isMobileMenuOpen ? 'Close main menu' : 'Open main menu'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-nav-menu"
             >
               {isMobileMenuOpen ? (
                 <XMarkIcon className="h-6 w-6 text-gray-600" />
@@ -216,7 +222,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
       {/* Mobile Navigation Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden">
+        <div id="mobile-nav-menu" className="md:hidden" role="menu" aria-label="Mobile navigation">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white border-t border-gray-200">
             {/* Mobile Search */}
             <div className="px-3 py-2">
