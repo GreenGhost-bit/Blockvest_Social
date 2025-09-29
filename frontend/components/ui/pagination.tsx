@@ -84,6 +84,7 @@ const Pagination: React.FC<PaginationProps> = ({
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             className={getIconButtonClasses(currentPage === 1)}
+            aria-label="Previous page"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -98,6 +99,7 @@ const Pagination: React.FC<PaginationProps> = ({
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             className={getIconButtonClasses(currentPage === totalPages)}
+            aria-label="Next page"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -116,6 +118,7 @@ const Pagination: React.FC<PaginationProps> = ({
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             className={getIconButtonClasses(currentPage === 1)}
+            aria-label="Previous page"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -138,6 +141,7 @@ const Pagination: React.FC<PaginationProps> = ({
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             className={getIconButtonClasses(currentPage === totalPages)}
+            aria-label="Next page"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -155,6 +159,7 @@ const Pagination: React.FC<PaginationProps> = ({
           onClick={() => handlePageChange(1)}
           disabled={currentPage === 1}
           className={getIconButtonClasses(currentPage === 1)}
+          aria-label="First page"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
@@ -167,6 +172,7 @@ const Pagination: React.FC<PaginationProps> = ({
           onClick={() => handlePageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className={getIconButtonClasses(currentPage === 1)}
+          aria-label="Previous page"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -179,6 +185,7 @@ const Pagination: React.FC<PaginationProps> = ({
           <button
             onClick={() => handlePageChange(1)}
             className={getButtonClasses(1)}
+            aria-label="Go to page 1"
           >
             1
           </button>
@@ -191,6 +198,8 @@ const Pagination: React.FC<PaginationProps> = ({
           key={page}
           onClick={() => handlePageChange(page)}
           className={getButtonClasses(page, page === currentPage)}
+          aria-current={page === currentPage ? 'page' : undefined}
+          aria-label={`Go to page ${page}`}
         >
           {page}
         </button>
@@ -202,6 +211,7 @@ const Pagination: React.FC<PaginationProps> = ({
           <button
             onClick={() => handlePageChange(totalPages)}
             className={getButtonClasses(totalPages)}
+            aria-label={`Go to page ${totalPages}`}
           >
             {totalPages}
           </button>
@@ -213,6 +223,7 @@ const Pagination: React.FC<PaginationProps> = ({
           onClick={() => handlePageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className={getIconButtonClasses(currentPage === totalPages)}
+          aria-label="Next page"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -225,6 +236,7 @@ const Pagination: React.FC<PaginationProps> = ({
           onClick={() => handlePageChange(totalPages)}
           disabled={currentPage === totalPages}
           className={getIconButtonClasses(currentPage === totalPages)}
+          aria-label="Last page"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
