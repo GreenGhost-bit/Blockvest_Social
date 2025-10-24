@@ -325,26 +325,47 @@ io.on('connection', (socket) => {
 });
 
 // Enhanced health check endpoint with detailed system information
-app.get('/health', (req, res) => {
-  const health = {
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    version: process.env.npm_package_version || '1.0.0',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    memory: {
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
-      external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
-    },
-    cpu: process.cpuUsage(),
-    platform: process.platform,
-    nodeVersion: process.version,
-    pid: process.pid
-  };
-  
-  res.status(200).json(health);
+app.get('/health', async (req, res) => {
+  try {
+    const health = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      version: process.env.npm_package_version || '1.0.0',
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      websocket: io ? 'active' : 'inactive',
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+        external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+      },
+      cpu: process.cpuUsage(),
+      platform: process.platform,
+      nodeVersion: process.version,
+      pid: process.pid,
+      connections: {
+        database: mongoose.connection.readyState,
+        websocket: io ? io.engine.clientsCount : 0
+      }
+    };
+
+    // Determine overall health status
+    if (mongoose.connection.readyState !== 1) {
+      health.status = 'degraded';
+    }
+    
+    const statusCode = health.status === 'OK' ? 200 : 503;
+    res.status(statusCode).json(health);
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
+      message: error.message
+    });
+  }
 });
 
 // Enhanced root endpoint
