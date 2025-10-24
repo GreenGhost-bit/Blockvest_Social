@@ -24,6 +24,12 @@ class ApiClient {
       ...options,
     };
 
+    // Add timeout to requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    config.signal = controller.signal;
+
     try {
       const response = await fetch(url, config);
       
@@ -59,11 +65,17 @@ class ApiClient {
 
       return await response.json();
     } catch (error) {
+      clearTimeout(timeoutId);
+      
       if (retryCount < 3 && error instanceof TypeError) {
         // Network error, retry
         console.warn(`Network error, retrying... (attempt ${retryCount + 1}/3)`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return this.request<T>(endpoint, options, retryCount + 1);
+      }
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please try again');
       }
       
       console.error('API request failed:', error);
