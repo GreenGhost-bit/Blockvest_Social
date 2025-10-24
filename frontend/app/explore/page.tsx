@@ -23,6 +23,30 @@ interface Investment {
 
 const ExplorePage: React.FC = () => {
   const { isConnected } = useWallet();
+  
+  // Add CSS animation styles
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.6s ease-out forwards;
+        opacity: 0;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,8 +229,14 @@ const ExplorePage: React.FC = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-          {investments.map((investment) => (
-            <article key={investment.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1" role="article" aria-labelledby={`investment-${investment.id}-title`}>
+          {investments.map((investment, index) => (
+            <article 
+              key={investment.id} 
+              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 animate-fade-in" 
+              role="article" 
+              aria-labelledby={`investment-${investment.id}-title`}
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
               <div className="p-4 md:p-6">
                 <div className="flex items-center justify-between mb-3 md:mb-4">
                   <span className="text-xl md:text-2xl font-bold text-gray-900" aria-label={`Investment amount: ${formatCurrency(investment.amount)}`}>
