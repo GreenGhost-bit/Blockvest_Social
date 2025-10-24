@@ -373,6 +373,23 @@ const userSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Login count cannot be negative']
   },
+  activity_log: [{
+    action: {
+      type: String,
+      required: true,
+      enum: ['login', 'logout', 'investment_created', 'investment_funded', 'profile_updated', 'verification_submitted', 'connection_added', 'badge_earned']
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    metadata: {
+      type: Map,
+      of: String
+    },
+    ip_address: String,
+    user_agent: String
+  }],
   badges: [{
     name: { 
       type: String, 
@@ -694,6 +711,41 @@ userSchema.methods.getVerificationStatus = function() {
     percentage: totalDocs > 0 ? Math.round((verifiedDocs / totalDocs) * 100) : 0,
     isFullyVerified: verifiedDocs === totalDocs && totalDocs > 0
   };
+};
+
+// Instance method to log user activity
+userSchema.methods.logActivity = function(action, metadata = {}, ipAddress = null, userAgent = null) {
+  this.activity_log.push({
+    action,
+    metadata,
+    ip_address: ipAddress,
+    user_agent: userAgent,
+    timestamp: new Date()
+  });
+  
+  // Keep only last 100 activities to prevent unbounded growth
+  if (this.activity_log.length > 100) {
+    this.activity_log = this.activity_log.slice(-100);
+  }
+  
+  this.last_active = new Date();
+  return this.save();
+};
+
+// Instance method to get recent activity
+userSchema.methods.getRecentActivity = function(limit = 10) {
+  return this.activity_log
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, limit);
+};
+
+// Instance method to get activity statistics
+userSchema.methods.getActivityStats = function() {
+  const stats = {};
+  this.activity_log.forEach(activity => {
+    stats[activity.action] = (stats[activity.action] || 0) + 1;
+  });
+  return stats;
 };
 
 module.exports = mongoose.model('User', userSchema);
