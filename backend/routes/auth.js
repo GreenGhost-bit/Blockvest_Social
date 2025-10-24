@@ -49,9 +49,27 @@ router.post('/connect-wallet', async (req, res) => {
           phone: ''
         },
         reputationScore: 50,
-        isVerified: false
+        isVerified: false,
+        preferences: {
+          notifications: {
+            email: true,
+            push: true,
+            sms: false
+          },
+          privacy: {
+            profile_public: true,
+            investment_history_public: false,
+            risk_score_public: false
+          },
+          investment: {
+            min_amount: 0.001,
+            max_amount: 1000,
+            preferred_risk_level: 'medium'
+          }
+        }
       });
       await user.save();
+      console.log(`New user created: ${walletAddress}`);
     }
 
     const token = jwt.sign(
