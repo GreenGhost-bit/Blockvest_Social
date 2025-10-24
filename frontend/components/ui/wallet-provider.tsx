@@ -406,13 +406,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     
     try {
       const accountAssets = await indexerClient.lookupAccountAssets(walletAddress).do();
+      
+      if (!accountAssets.assets || accountAssets.assets.length === 0) {
+        setAssets([]);
+        return;
+      }
+      
       const assetDetails = await Promise.all(
         accountAssets.assets.map(async (asset: any) => {
           try {
             const assetInfo = await indexerClient.lookupAssetByID(asset.assetId).do();
             return {
               id: asset.assetId,
-              name: assetInfo.asset.params.name || 'Unknown',
+              name: assetInfo.asset.params.name || 'Unknown Asset',
               unitName: assetInfo.asset.params.unitName || '',
               decimals: assetInfo.asset.params.decimals || 0,
               totalSupply: assetInfo.asset.params.total || 0,
@@ -434,6 +440,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setAssets(assetDetails.filter(Boolean) as Asset[]);
     } catch (err) {
       console.error('Failed to fetch assets:', err);
+      setAssets([]);
     }
   }, [walletAddress, indexerClient]);
 
