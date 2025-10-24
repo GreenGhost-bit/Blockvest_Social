@@ -175,16 +175,16 @@ const ExplorePage: React.FC = () => {
         </div>
 
         {/* Sorting and Filtering Controls */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div>
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+              <div className="flex-1 sm:flex-none sm:w-48">
                 <label htmlFor="sort-select" className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
                 <select
                   id="sort-select"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
                   aria-label="Sort investments by"
                 >
                   <option value="amount">Amount</option>
@@ -193,13 +193,13 @@ const ExplorePage: React.FC = () => {
                   <option value="reputation">Reputation</option>
                 </select>
               </div>
-              <div>
+              <div className="flex-1 sm:flex-none sm:w-48">
                 <label htmlFor="filter-select" className="block text-sm font-medium text-gray-700 mb-2">Filter by risk</label>
                 <select
                   id="filter-select"
                   value={filterBy}
                   onChange={(e) => setFilterBy(e.target.value as any)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
                   aria-label="Filter investments by risk level"
                 >
                   <option value="all">All Risk Levels</option>
@@ -209,7 +209,7 @@ const ExplorePage: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="text-sm text-gray-500" aria-live="polite">
+            <div className="text-sm text-gray-500 font-medium" aria-live="polite">
               {investments.length} opportunities found
             </div>
           </div>
