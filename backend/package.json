@@ -20,7 +20,13 @@
     "generate:risk-report": "node scripts/generate-risk-report.js",
     "health-check": "curl -f http://localhost:5000/health || exit 1",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "check": "npm run lint && npm run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "rm -rf node_modules package-lock.json && npm install",
+    "logs": "tail -f logs/app.log",
+    "monitor": "pm2 monit"
   },
   "dependencies": {
     "express": "^4.18.2",
