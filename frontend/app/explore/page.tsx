@@ -150,11 +150,13 @@ const ExplorePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
+                <label htmlFor="sort-select" className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
                 <select
+                  id="sort-select"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  aria-label="Sort investments by"
                 >
                   <option value="amount">Amount</option>
                   <option value="interestRate">Interest Rate</option>
@@ -163,11 +165,13 @@ const ExplorePage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by risk</label>
+                <label htmlFor="filter-select" className="block text-sm font-medium text-gray-700 mb-2">Filter by risk</label>
                 <select
+                  id="filter-select"
                   value={filterBy}
                   onChange={(e) => setFilterBy(e.target.value as any)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  aria-label="Filter investments by risk level"
                 >
                   <option value="all">All Risk Levels</option>
                   <option value="low">Low Risk</option>
@@ -176,7 +180,7 @@ const ExplorePage: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500" aria-live="polite">
               {investments.length} opportunities found
             </div>
           </div>
