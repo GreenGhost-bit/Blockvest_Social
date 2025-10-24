@@ -284,7 +284,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Enhanced health check endpoint
+// Enhanced health check endpoint with detailed system information
 app.get('/health', (req, res) => {
   const health = {
     status: 'OK',
@@ -292,8 +292,16 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
     version: process.env.npm_package_version || '1.0.0',
-    database: db.readyState === 1 ? 'connected' : 'disconnected',
-    memory: process.memoryUsage(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+      external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+    },
+    cpu: process.cpuUsage(),
+    platform: process.platform,
+    nodeVersion: process.version,
+    pid: process.pid
   };
   
   res.status(200).json(health);
