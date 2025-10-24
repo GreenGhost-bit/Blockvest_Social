@@ -409,7 +409,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setBalance(balanceInAlgos);
     } catch (err) {
       console.error('Failed to fetch balance:', err);
-      setBalance(0);
+      // Don't set balance to 0 on error, keep previous value
+      if (err instanceof Error && err.message.includes('not found')) {
+        setBalance(0);
+      }
     }
   }, [algodClient]);
 
