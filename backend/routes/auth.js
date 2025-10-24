@@ -7,10 +7,24 @@ const router = express.Router();
 
 router.post('/connect-wallet', async (req, res) => {
   try {
-    const { walletAddress, signature, message } = req.body;
+    const { walletAddress, signature, message, network } = req.body;
     
+    // Enhanced validation
     if (!walletAddress || !signature || !message) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['walletAddress', 'signature', 'message']
+      });
+    }
+
+    // Validate wallet address format
+    if (!/^[A-Z2-7]{58}$/.test(walletAddress)) {
+      return res.status(400).json({ error: 'Invalid wallet address format' });
+    }
+
+    // Validate signature format
+    if (!/^[A-Za-z0-9+/=]+$/.test(signature)) {
+      return res.status(400).json({ error: 'Invalid signature format' });
     }
 
     const isValid = algosdk.verifyBytes(
@@ -20,7 +34,7 @@ router.post('/connect-wallet', async (req, res) => {
     );
 
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid signature' });
+      return res.status(401).json({ error: 'Invalid signature verification failed' });
     }
 
     let user = await User.findOne({ walletAddress });
