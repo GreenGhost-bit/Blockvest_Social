@@ -250,7 +250,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         }
       }
     }
-  }, [networkConfig, fetchBalance, fetchAssets, fetchTransactions]);
+  }, [networkConfig]);
 
   const disconnectWallet = useCallback(() => {
     setIsConnected(false);
