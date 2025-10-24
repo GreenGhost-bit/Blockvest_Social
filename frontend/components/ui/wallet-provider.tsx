@@ -542,7 +542,12 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           'Authorization': `Bearer ${token}`,
         },
       })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Invalid token');
+          }
+          return response.json();
+        })
         .then(data => {
           if (data.user) {
             setUser(data.user);
@@ -554,7 +559,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             fetchTransactions();
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.warn('Token validation failed:', error);
           localStorage.removeItem('token');
           setConnectionStatus('disconnected');
         });
