@@ -59,10 +59,20 @@ const ExplorePage: React.FC = () => {
 
   const handleFundInvestment = async (investment: Investment) => {
     if (!isConnected) {
-      alert('Please connect your wallet first');
+      setError('Please connect your wallet first to fund investments');
       return;
     }
-    setSelectedInvestment(investment);
+    
+    try {
+      setLoading(true);
+      setSelectedInvestment(investment);
+      // Additional validation could be added here
+    } catch (err) {
+      setError('Failed to initiate investment funding');
+      console.error('Investment funding error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleViewRiskDetails = (investment: Investment) => {
