@@ -544,8 +544,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       // Attempt to reconnect with new network
       try {
         await connectWallet();
+        console.log(`Successfully switched to ${network} network`);
       } catch (err) {
         console.warn('Failed to reconnect after network switch:', err);
+        // Try to reconnect with previous network as fallback
+        const fallbackNetwork = Object.keys(NETWORKS).find(key => key !== network) || 'testnet';
+        setNetworkConfig(NETWORKS[fallbackNetwork]);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('network', fallbackNetwork);
+        }
+        throw new Error(`Failed to connect to ${network} network. Switched back to ${fallbackNetwork}.`);
       }
     } else {
       // Just update the stored preference
