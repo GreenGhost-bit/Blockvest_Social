@@ -40,7 +40,13 @@ const ExplorePage: React.FC = () => {
   const fetchInvestments = async () => {
     try {
       setLoading(true);
-      const response = await api.investments.explore({ page, limit: 10, status: 'pending' });
+      const response = await api.investments.explore({ 
+        page, 
+        limit: 10, 
+        status: 'pending',
+        sortBy,
+        filterBy 
+      });
       setInvestments(response.investments);
       setTotalPages(response.pagination.pages);
     } catch (err) {
