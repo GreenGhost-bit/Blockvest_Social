@@ -103,6 +103,9 @@ const ExplorePage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading investment opportunities...</p>
+          <div className="mt-2 text-sm text-gray-500">
+            Fetching the latest opportunities for you
+          </div>
         </div>
       </div>
     );
