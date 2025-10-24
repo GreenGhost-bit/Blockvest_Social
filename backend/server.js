@@ -69,13 +69,30 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Enhanced CORS configuration
+// Enhanced CORS configuration with better security
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.CORS_ORIGIN || "http://localhost:3000",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://blockvest-social.vercel.app"
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-Total-Count', 'X-Page-Count']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-API-Key'],
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count', 'X-Rate-Limit-Remaining']
 }));
 
 // Compression middleware for better performance
