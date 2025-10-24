@@ -182,6 +182,33 @@ app.use(express.urlencoded({
   parameterLimit: 1000 // Limit number of parameters
 }));
 
+// Request validation middleware
+app.use((req, res, next) => {
+  // Validate request size
+  const contentLength = parseInt(req.headers['content-length'] || '0');
+  if (contentLength > 10 * 1024 * 1024) { // 10MB limit
+    return res.status(413).json({
+      error: 'Request entity too large',
+      timestamp: new Date().toISOString(),
+      code: 'REQUEST_TOO_LARGE'
+    });
+  }
+  
+  // Validate content type for POST/PUT requests
+  if ((req.method === 'POST' || req.method === 'PUT') && req.headers['content-type']) {
+    const contentType = req.headers['content-type'];
+    if (!contentType.includes('application/json') && !contentType.includes('multipart/form-data')) {
+      return res.status(415).json({
+        error: 'Unsupported media type',
+        timestamp: new Date().toISOString(),
+        code: 'UNSUPPORTED_MEDIA_TYPE'
+      });
+    }
+  }
+  
+  next();
+});
+
 // Enhanced MongoDB connection with better error handling and retry logic
 const connectDB = async () => {
   try {
