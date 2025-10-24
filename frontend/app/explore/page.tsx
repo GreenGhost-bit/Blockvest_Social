@@ -66,7 +66,12 @@ const ExplorePage: React.FC = () => {
     try {
       setLoading(true);
       setSelectedInvestment(investment);
+      
+      // Simulate API call for funding
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Additional validation could be added here
+      console.log('Funding investment:', investment.id);
     } catch (err) {
       setError('Failed to initiate investment funding');
       console.error('Investment funding error:', err);
