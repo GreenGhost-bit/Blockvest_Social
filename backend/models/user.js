@@ -651,8 +651,17 @@ userSchema.methods.updatePreferences = function(newPreferences) {
   return this.save();
 };
 
-// Instance method to add verification document
+// Instance method to add verification document with validation
 userSchema.methods.addVerificationDocument = function(type, url) {
+  if (!type || !url) {
+    throw new Error('Document type and URL are required');
+  }
+  
+  const validTypes = ['id_card', 'passport', 'drivers_license', 'utility_bill', 'bank_statement', 'other'];
+  if (!validTypes.includes(type)) {
+    throw new Error('Invalid document type');
+  }
+  
   this.verification_documents.push({
     type,
     url,
@@ -662,14 +671,29 @@ userSchema.methods.addVerificationDocument = function(type, url) {
   return this.save();
 };
 
-// Instance method to mark document as verified
+// Instance method to mark document as verified with logging
 userSchema.methods.verifyDocument = function(documentId) {
   const document = this.verification_documents.id(documentId);
   if (document) {
     document.verified = true;
+    document.verified_at = new Date();
+    console.log(`Document ${documentId} verified for user ${this._id}`);
     return this.save();
   }
   return Promise.resolve(this);
+};
+
+// Instance method to get verification status
+userSchema.methods.getVerificationStatus = function() {
+  const totalDocs = this.verification_documents.length;
+  const verifiedDocs = this.verification_documents.filter(doc => doc.verified).length;
+  
+  return {
+    total: totalDocs,
+    verified: verifiedDocs,
+    percentage: totalDocs > 0 ? Math.round((verifiedDocs / totalDocs) * 100) : 0,
+    isFullyVerified: verifiedDocs === totalDocs && totalDocs > 0
+  };
 };
 
 module.exports = mongoose.model('User', userSchema);
