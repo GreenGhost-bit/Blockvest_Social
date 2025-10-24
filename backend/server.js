@@ -341,20 +341,26 @@ server.listen(PORT, () => {
   console.log('='.repeat(50));
 });
 
-// Enhanced graceful shutdown
+// Enhanced graceful shutdown with better cleanup
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  console.log('SIGTERM received, shutting down gracefully...');
   server.close(() => {
-    console.log('Process terminated');
-    process.exit(0);
+    console.log('HTTP server closed');
+    mongoose.connection.close(false, () => {
+      console.log('Database connection closed');
+      process.exit(0);
+    });
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
+  console.log('SIGINT received, shutting down gracefully...');
   server.close(() => {
-    console.log('Process terminated');
-    process.exit(0);
+    console.log('HTTP server closed');
+    mongoose.connection.close(false, () => {
+      console.log('Database connection closed');
+      process.exit(0);
+    });
   });
 });
 
