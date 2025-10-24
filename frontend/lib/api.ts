@@ -3,9 +3,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
 class ApiClient {
   private baseURL: string;
   private pendingRequests: Map<string, Promise<any>> = new Map();
+  private cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map();
+  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     this.baseURL = API_BASE_URL;
+    
+    // Clean up expired cache entries every 10 minutes
+    setInterval(() => {
+      this.cleanExpiredCache();
+    }, 10 * 60 * 1000);
   }
 
   private async request<T>(
@@ -15,6 +22,16 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
+    // Check cache for GET requests
+    const cacheKey = this.getCacheKey(endpoint, options);
+    if ((options.method === 'GET' || !options.method) && retryCount === 0) {
+      const cachedData = this.getFromCache<T>(cacheKey);
+      if (cachedData) {
+        console.log('Cache hit for:', cacheKey);
+        return cachedData;
+      }
+    }
     
     // Create request key for deduplication (only for GET requests)
     const requestKey = options.method === 'GET' || !options.method 
@@ -52,6 +69,12 @@ class ApiClient {
 
     try {
       const result = await requestPromise;
+      
+      // Cache successful GET requests
+      if ((options.method === 'GET' || !options.method) && retryCount === 0) {
+        this.setCache(cacheKey, result);
+      }
+      
       return result;
     } finally {
       // Clean up the pending request
@@ -59,6 +82,42 @@ class ApiClient {
         this.pendingRequests.delete(requestKey);
       }
     }
+  }
+
+  private cleanExpiredCache(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  private getCacheKey(endpoint: string, options: RequestInit): string {
+    const method = options.method || 'GET';
+    const body = options.body ? JSON.stringify(options.body) : '';
+    return `${method}:${endpoint}:${body}`;
+  }
+
+  private getFromCache<T>(cacheKey: string): T | null {
+    const entry = this.cache.get(cacheKey);
+    if (!entry) return null;
+    
+    const now = Date.now();
+    if (now - entry.timestamp > entry.ttl) {
+      this.cache.delete(cacheKey);
+      return null;
+    }
+    
+    return entry.data;
+  }
+
+  private setCache<T>(cacheKey: string, data: T, ttl: number = this.DEFAULT_TTL): void {
+    this.cache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
   }
 
   private async executeRequest<T>(
