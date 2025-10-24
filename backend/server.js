@@ -196,29 +196,42 @@ app.locals.indexerClient = indexerClient;
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   
+  // Log additional context for debugging
+  console.error('Request details:', {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+  
   if (err.name === 'ValidationError') {
     return res.status(400).json({
       error: 'Validation Error',
-      details: Object.values(err.errors).map(e => e.message)
+      details: Object.values(err.errors).map(e => e.message),
+      timestamp: new Date().toISOString()
     });
   }
   
   if (err.name === 'CastError') {
     return res.status(400).json({
-      error: 'Invalid ID format'
+      error: 'Invalid ID format',
+      timestamp: new Date().toISOString()
     });
   }
   
   if (err.code === 11000) {
     return res.status(400).json({
-      error: 'Duplicate field value'
+      error: 'Duplicate field value',
+      timestamp: new Date().toISOString()
     });
   }
   
   res.status(500).json({
     error: process.env.NODE_ENV === 'production' 
       ? 'Internal server error' 
-      : err.message
+      : err.message,
+    timestamp: new Date().toISOString()
   });
 });
 
