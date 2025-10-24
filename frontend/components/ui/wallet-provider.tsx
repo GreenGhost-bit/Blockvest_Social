@@ -395,9 +395,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const fetchBalance = useCallback(async (address: string) => {
     try {
       const accountInfo = await algodClient.accountInformation(address).do();
-      setBalance(accountInfo.amount / 1000000);
+      const balanceInAlgos = accountInfo.amount / 1000000; // Convert microAlgos to Algos
+      setBalance(balanceInAlgos);
     } catch (err) {
       console.error('Failed to fetch balance:', err);
+      setBalance(0);
     }
   }, [algodClient]);
 
