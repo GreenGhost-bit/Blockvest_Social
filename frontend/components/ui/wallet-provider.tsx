@@ -237,7 +237,21 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           setError(`${errorMessage} (Attempt ${retryCount}/${maxRetries})`);
           setIsConnected(false);
           setWalletAddress(null);
+          setUser(null);
+          setBalance(0);
+          setAssets([]);
+          setTransactions([]);
+          setPendingTransactions([]);
           setConnectionStatus('error');
+          
+          // Clear localStorage on final failure
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('walletAddress');
+            localStorage.removeItem('isConnected');
+            localStorage.removeItem('network');
+          }
+          
           console.error('Wallet connection error after retries:', err);
         } else {
           console.warn(`Wallet connection attempt ${retryCount} failed:`, errorMessage);
