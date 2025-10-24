@@ -94,20 +94,29 @@ app.use(morgan(morganFormat, {
   }
 }));
 
-// Enhanced rate limiting
+// Enhanced rate limiting with better configuration
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: {
     error: 'Too many requests from this IP, please try again later.',
-    retryAfter: '15 minutes'
+    retryAfter: '15 minutes',
+    timestamp: new Date().toISOString()
   },
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
   keyGenerator: (req) => {
+    // Use X-Forwarded-For header if available (for load balancers)
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+      return forwarded.split(',')[0].trim();
+    }
     return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  onLimitReached: (req, res, options) => {
+    console.warn(`Rate limit exceeded for IP: ${req.ip} at ${new Date().toISOString()}`);
   }
 });
 
