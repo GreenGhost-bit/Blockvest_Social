@@ -246,26 +246,41 @@ app.use('/api/mfa', mfaRoutes);
 app.use('/api/risk-assessment', riskAssessmentRoutes);
 app.use('/api/smart-contracts', smartContractRoutes);
 
-// Enhanced Socket.IO event handling
+// Enhanced Socket.IO event handling with better error management
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   socket.on('join', (userId) => {
+    if (!userId) {
+      socket.emit('error', { message: 'User ID is required' });
+      return;
+    }
     socket.join(`user_${userId}`);
     console.log(`User ${userId} joined their room`);
+    socket.emit('joined', { room: `user_${userId}` });
   });
 
   socket.on('investment_update', (data) => {
+    if (!data.userId) {
+      socket.emit('error', { message: 'User ID is required for investment updates' });
+      return;
+    }
     socket.broadcast.to(`user_${data.userId}`).emit('investment_updated', data);
   });
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
   });
 
   // Enhanced error handling for socket events
   socket.on('error', (error) => {
     console.error('Socket error:', error);
+    socket.emit('error', { message: 'An error occurred' });
+  });
+
+  // Handle ping/pong for connection health
+  socket.on('ping', () => {
+    socket.emit('pong');
   });
 });
 
