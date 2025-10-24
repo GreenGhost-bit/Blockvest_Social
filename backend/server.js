@@ -98,16 +98,21 @@ app.use(cors({
 // Compression middleware for better performance
 app.use(compression());
 
-// Enhanced logging with better formatting
+// Enhanced logging with better formatting and request tracking
 const morganFormat = process.env.NODE_ENV === 'production' 
   ? 'combined' 
-  : ':method :url :status :res[content-length] - :response-time ms';
+  : ':method :url :status :res[content-length] - :response-time ms :user-agent';
 
 app.use(morgan(morganFormat, {
   stream: {
     write: (message) => {
-      console.log(message.trim());
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] ${message.trim()}`);
     }
+  },
+  skip: (req, res) => {
+    // Skip logging for health checks in production
+    return process.env.NODE_ENV === 'production' && req.url === '/health';
   }
 }));
 
