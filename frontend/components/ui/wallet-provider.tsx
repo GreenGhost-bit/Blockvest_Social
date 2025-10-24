@@ -453,22 +453,33 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         .limit(limit)
         .do();
       
-      const formattedTransactions: Transaction[] = response.transactions.map((tx: any) => ({
-        id: tx.id,
-        type: tx['tx-type'] as Transaction['type'],
-        amount: tx.amount || 0,
-        assetId: tx['asset-transfer-transaction']?.assetId,
-        from: tx.sender,
-        to: tx['payment-transaction']?.receiver || tx['asset-transfer-transaction']?.receiver || '',
-        fee: tx.fee,
-        timestamp: tx['round-time'] * 1000,
-        status: 'confirmed',
-        note: tx.note ? new TextDecoder().decode(tx.note) : undefined
-      }));
+      if (!response.transactions || response.transactions.length === 0) {
+        setTransactions([]);
+        return;
+      }
+      
+      const formattedTransactions: Transaction[] = response.transactions.map((tx: any) => {
+        const amount = tx.amount || tx['payment-transaction']?.amount || tx['asset-transfer-transaction']?.amount || 0;
+        const receiver = tx['payment-transaction']?.receiver || tx['asset-transfer-transaction']?.receiver || '';
+        
+        return {
+          id: tx.id,
+          type: tx['tx-type'] as Transaction['type'],
+          amount: amount,
+          assetId: tx['asset-transfer-transaction']?.assetId,
+          from: tx.sender,
+          to: receiver,
+          fee: tx.fee,
+          timestamp: tx['round-time'] * 1000,
+          status: 'confirmed',
+          note: tx.note ? new TextDecoder().decode(tx.note) : undefined
+        };
+      });
       
       setTransactions(formattedTransactions);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
+      setTransactions([]);
     }
   }, [walletAddress, indexerClient]);
 
