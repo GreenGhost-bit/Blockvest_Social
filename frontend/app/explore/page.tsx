@@ -199,24 +199,24 @@ const ExplorePage: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {investments.map((investment) => (
             <article key={investment.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1" role="article" aria-labelledby={`investment-${investment.id}-title`}>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl font-bold text-gray-900" aria-label={`Investment amount: ${formatCurrency(investment.amount)}`}>
+              <div className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                  <span className="text-xl md:text-2xl font-bold text-gray-900" aria-label={`Investment amount: ${formatCurrency(investment.amount)}`}>
                     {formatCurrency(investment.amount)}
                   </span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getReputationColor(investment.borrower.reputationScore)}`} aria-label={`Borrower reputation score: ${investment.borrower.reputationScore} out of 100`}>
+                  <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium ${getReputationColor(investment.borrower.reputationScore)}`} aria-label={`Borrower reputation score: ${investment.borrower.reputationScore} out of 100`}>
                     {investment.borrower.reputationScore}/100
                   </span>
                 </div>
 
-                <h3 id={`investment-${investment.id}-title`} className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
+                <h3 id={`investment-${investment.id}-title`} className="text-base md:text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
                   {investment.purpose}
                 </h3>
 
-                <p className="text-gray-600 mb-4 line-clamp-2 text-sm leading-relaxed" aria-describedby={`investment-${investment.id}-title`}>
+                <p className="text-gray-600 mb-3 md:mb-4 line-clamp-2 text-sm leading-relaxed" aria-describedby={`investment-${investment.id}-title`}>
                   {investment.description}
                 </p>
 
