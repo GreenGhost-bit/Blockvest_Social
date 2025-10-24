@@ -476,13 +476,37 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   }, [algodClient]);
 
   const switchNetwork = useCallback(async (network: string) => {
-    if (NETWORKS[network]) {
-      setNetworkConfig(NETWORKS[network]);
-      if (isConnected) {
-        await disconnectWallet();
+    if (!NETWORKS[network]) {
+      throw new Error(`Unsupported network: ${network}`);
+    }
+    
+    const newNetworkConfig = NETWORKS[network];
+    
+    // Update network configuration
+    setNetworkConfig(newNetworkConfig);
+    
+    // If currently connected, disconnect and reconnect with new network
+    if (isConnected) {
+      await disconnectWallet();
+      
+      // Update stored network preference
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('network', network);
+      }
+      
+      // Attempt to reconnect with new network
+      try {
+        await connectWallet();
+      } catch (err) {
+        console.warn('Failed to reconnect after network switch:', err);
+      }
+    } else {
+      // Just update the stored preference
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('network', network);
       }
     }
-  }, [isConnected, disconnectWallet]);
+  }, [isConnected, disconnectWallet, connectWallet]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
