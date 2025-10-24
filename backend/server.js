@@ -160,19 +160,27 @@ const authLimiter = rateLimit({
 app.use('/api/', limiter);
 app.use('/api/auth', authLimiter);
 
-// Enhanced body parsing with better limits
+// Enhanced body parsing with better limits and validation
 app.use(express.json({ 
   limit: '10mb',
   verify: (req, res, buf) => {
     try {
       JSON.parse(buf);
     } catch (e) {
-      res.status(400).json({ error: 'Invalid JSON' });
+      res.status(400).json({ 
+        error: 'Invalid JSON format',
+        timestamp: new Date().toISOString()
+      });
       throw new Error('Invalid JSON');
     }
   }
 }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb',
+  parameterLimit: 1000 // Limit number of parameters
+}));
 
 // Enhanced MongoDB connection with better error handling and retry logic
 const connectDB = async () => {
