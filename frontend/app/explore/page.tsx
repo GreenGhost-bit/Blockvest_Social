@@ -54,8 +54,39 @@ const ExplorePage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [showRiskDetails, setShowRiskDetails] = useState(false);
-  const [sortBy, setSortBy] = useState<'amount' | 'interestRate' | 'duration' | 'reputation'>('amount');
-  const [filterBy, setFilterBy] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  // Error boundary state
+  const [hasError, setHasError] = useState(false);
+  const [errorInfo, setErrorInfo] = useState<string | null>(null);
+
+  // Error boundary effect
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Global error caught:', event.error);
+      setHasError(true);
+      setErrorInfo(event.error?.message || 'An unexpected error occurred');
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      setHasError(true);
+      setErrorInfo(event.reason?.message || 'An unexpected error occurred');
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  // Reset error state
+  const resetError = () => {
+    setHasError(false);
+    setErrorInfo(null);
+    setError(null);
+  };
 
   useEffect(() => {
     fetchInvestments();
@@ -125,6 +156,31 @@ const ExplorePage: React.FC = () => {
     if (score >= 60) return 'text-yellow-600 bg-yellow-100';
     return 'text-red-600 bg-red-100';
   };
+
+  // Show error boundary if there's a critical error
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-6">
+            <div className="flex items-center justify-center mb-2">
+              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold">Critical Error</h3>
+            </div>
+            <p className="text-sm">{errorInfo}</p>
+          </div>
+          <button
+            onClick={resetError}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
