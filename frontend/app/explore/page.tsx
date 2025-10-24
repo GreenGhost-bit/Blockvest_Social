@@ -236,9 +236,10 @@ const ExplorePage: React.FC = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleFundInvestment(investment)}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading}
                   >
-                    Fund Investment
+                    {loading ? 'Processing...' : 'Fund Investment'}
                   </button>
                   <button 
                     onClick={() => handleViewRiskDetails(investment)}
