@@ -471,11 +471,18 @@ userSchema.pre('save', function(next) {
 
 // Instance method to check password
 userSchema.methods.checkPassword = async function(candidatePassword) {
+  if (!this.password) {
+    return false; // No password set (wallet-only user)
+  }
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Instance method to update reputation
+// Instance method to update reputation with validation
 userSchema.methods.updateReputation = function(scoreChange, reason) {
+  if (typeof scoreChange !== 'number' || !reason) {
+    throw new Error('Invalid reputation update parameters');
+  }
+  
   this.reputationScore = Math.max(0, Math.min(100, this.reputationScore + scoreChange));
   this.reputation_history.push({
     score_change: scoreChange,
