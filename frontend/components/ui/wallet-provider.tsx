@@ -289,7 +289,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const sendTransaction = useCallback(async (transaction: any): Promise<string> => {
     try {
-      const signedTxn = await signTransaction(transaction);
+      if (!isConnected || typeof window === 'undefined' || !('algorand' in window)) {
+        throw new Error('Wallet not connected');
+      }
+
+      const algorand = (window as any).algorand;
+      const signedTxn = await algorand.signTransaction(transaction);
+      
       const response = await algodClient.sendRawTransaction(signedTxn).do();
       
       const newTransaction: Transaction = {
@@ -306,6 +312,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       
       setPendingTransactions(prev => [...prev, newTransaction]);
       
+      // Wait for confirmation with timeout
       const confirmation = await algosdk.waitForConfirmation(algodClient, response.txId, 10);
       
       if (confirmation['confirmed-round']) {
@@ -317,9 +324,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         throw new Error('Transaction failed to confirm');
       }
     } catch (err) {
+      console.error('Transaction error:', err);
       throw new Error(err instanceof Error ? err.message : 'Failed to send transaction');
     }
-  }, [signTransaction, walletAddress, algodClient]);
+  }, [isConnected, walletAddress, algodClient]);
 
   const sendTransactions = useCallback(async (transactions: any[]): Promise<string[]> => {
     try {
