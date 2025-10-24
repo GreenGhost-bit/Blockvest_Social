@@ -28,7 +28,25 @@ class ApiClient {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          // Clear invalid token
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+          }
+          throw new Error('Authentication required. Please reconnect your wallet.');
+        }
+        
+        if (response.status === 403) {
+          throw new Error('Access denied. Insufficient permissions.');
+        }
+        
+        if (response.status >= 500) {
+          throw new Error('Server error. Please try again later.');
+        }
+        
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
       }
 
       return await response.json();
