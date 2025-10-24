@@ -583,13 +583,17 @@ userSchema.methods.unfollowUser = function(userIdToUnfollow) {
   return this.save();
 };
 
-// Instance method to add connection
+// Instance method to add connection with validation
 userSchema.methods.addConnection = function(userId, strength = 5) {
+  if (userId.toString() === this._id.toString()) {
+    throw new Error('Cannot connect to yourself');
+  }
+  
   const existingConnection = this.connections.find(conn => conn.user.toString() === userId.toString());
   if (!existingConnection) {
     this.connections.push({
       user: userId,
-      strength: strength,
+      strength: Math.max(1, Math.min(10, strength)),
       connected_at: new Date()
     });
     return this.save();
@@ -597,14 +601,21 @@ userSchema.methods.addConnection = function(userId, strength = 5) {
   return Promise.resolve(this);
 };
 
-// Instance method to update connection strength
+// Instance method to update connection strength with validation
 userSchema.methods.updateConnectionStrength = function(userId, newStrength) {
   const connection = this.connections.find(conn => conn.user.toString() === userId.toString());
   if (connection) {
     connection.strength = Math.max(1, Math.min(10, newStrength));
+    connection.updated_at = new Date();
     return this.save();
   }
   return Promise.resolve(this);
+};
+
+// Instance method to remove connection
+userSchema.methods.removeConnection = function(userId) {
+  this.connections = this.connections.filter(conn => conn.user.toString() !== userId.toString());
+  return this.save();
 };
 
 // Instance method to get top connections
