@@ -599,13 +599,24 @@ userSchema.methods.getTopConnections = function(limit = 5) {
     .slice(0, limit);
 };
 
-// Instance method to calculate social score
+// Instance method to calculate social score with enhanced algorithm
 userSchema.methods.calculateSocialScore = function() {
-  const followerBonus = this.followers.length * 2;
-  const connectionBonus = this.connections.reduce((sum, conn) => sum + conn.strength, 0);
-  const activityBonus = this.login_count * 0.1;
+  const followerBonus = Math.min(this.followers.length * 2, 20); // Cap at 20 points
+  const connectionBonus = Math.min(this.connections.reduce((sum, conn) => sum + conn.strength, 0), 30); // Cap at 30 points
+  const activityBonus = Math.min(this.login_count * 0.1, 10); // Cap at 10 points
+  const verificationBonus = this.isVerified ? 15 : 0; // Bonus for verification
+  const badgeBonus = Math.min(this.badges.length * 2, 10); // Cap at 10 points
   
-  return Math.min(100, this.reputationScore + followerBonus + connectionBonus + activityBonus);
+  const socialScore = Math.min(100, 
+    this.reputationScore + 
+    followerBonus + 
+    connectionBonus + 
+    activityBonus + 
+    verificationBonus + 
+    badgeBonus
+  );
+  
+  return Math.round(socialScore);
 };
 
 // Instance method to update preferences
