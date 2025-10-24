@@ -42,10 +42,10 @@ const userSchema = new mongoose.Schema({
     trim: true,
     validate: {
       validator: function(v) {
-        // More flexible Algorand address validation
-        return /^[A-Z2-7]{58}$/.test(v) || /^[A-Z2-7]{25,58}$/.test(v);
+        // Strict Algorand address validation for mainnet/testnet
+        return /^[A-Z2-7]{58}$/.test(v);
       },
-      message: 'Invalid Algorand wallet address format'
+      message: 'Invalid Algorand wallet address format - must be 58 characters'
     }
   },
   wallet_private_key: {
