@@ -197,22 +197,22 @@ const ExplorePage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {investments.map((investment) => (
-            <div key={investment.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <div key={investment.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-2xl font-bold text-gray-900">
                     {formatCurrency(investment.amount)}
                   </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReputationColor(investment.borrower.reputationScore)}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getReputationColor(investment.borrower.reputationScore)}`}>
                     {investment.borrower.reputationScore}/100
                   </span>
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
                   {investment.purpose}
                 </h3>
 
-                <p className="text-gray-600 mb-4 line-clamp-2">
+                <p className="text-gray-600 mb-4 line-clamp-2 text-sm leading-relaxed">
                   {investment.description}
                 </p>
 
