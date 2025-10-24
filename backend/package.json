@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "build": "echo 'No build step needed for Node.js'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -16,7 +17,10 @@
     "deploy:contracts": "node scripts/deploy-contracts.js",
     "cleanup:mfa": "node scripts/cleanup-mfa.js",
     "reassess:risk": "node scripts/scheduled-risk-reassessment.js",
-    "generate:risk-report": "node scripts/generate-risk-report.js"
+    "generate:risk-report": "node scripts/generate-risk-report.js",
+    "health-check": "curl -f http://localhost:5000/health || exit 1",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js"
   },
   "dependencies": {
     "express": "^4.18.2",
