@@ -2,6 +2,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
 
 class ApiClient {
   private baseURL: string;
+  private pendingRequests: Map<string, Promise<any>> = new Map();
 
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -14,6 +15,17 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
+    // Create request key for deduplication (only for GET requests)
+    const requestKey = options.method === 'GET' || !options.method 
+      ? `${url}_${token || 'no-token'}` 
+      : null;
+    
+    // Check if same request is already pending
+    if (requestKey && this.pendingRequests.has(requestKey)) {
+      console.log('Deduplicating request:', requestKey);
+      return this.pendingRequests.get(requestKey)!;
+    }
 
     const config: RequestInit = {
       headers: {
@@ -30,6 +42,34 @@ class ApiClient {
     
     config.signal = controller.signal;
 
+    // Create the request promise
+    const requestPromise = this.executeRequest<T>(url, config, controller, timeoutId, endpoint, options, retryCount);
+    
+    // Store the promise for deduplication
+    if (requestKey) {
+      this.pendingRequests.set(requestKey, requestPromise);
+    }
+
+    try {
+      const result = await requestPromise;
+      return result;
+    } finally {
+      // Clean up the pending request
+      if (requestKey) {
+        this.pendingRequests.delete(requestKey);
+      }
+    }
+  }
+
+  private async executeRequest<T>(
+    url: string,
+    config: RequestInit,
+    controller: AbortController,
+    timeoutId: NodeJS.Timeout,
+    endpoint: string,
+    options: RequestInit,
+    retryCount: number
+  ): Promise<T> {
     try {
       const response = await fetch(url, config);
       
@@ -53,7 +93,7 @@ class ApiClient {
           // Retry on server errors
           console.warn(`Server error, retrying... (attempt ${retryCount + 1}/3)`);
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-          return this.request<T>(endpoint, options, retryCount + 1);
+          return this.executeRequest<T>(url, config, controller, timeoutId, endpoint, options, retryCount + 1);
         }
         
         if (response.status >= 500) {
