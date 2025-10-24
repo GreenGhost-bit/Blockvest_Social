@@ -498,14 +498,29 @@ userSchema.methods.updateReputation = function(scoreChange, reason) {
   return this.save();
 };
 
-// Instance method to add badge
+// Instance method to add badge with duplicate prevention
 userSchema.methods.addBadge = function(name, description) {
   const existingBadge = this.badges.find(badge => badge.name === name);
   if (!existingBadge) {
-    this.badges.push({ name, description });
+    this.badges.push({ 
+      name, 
+      description,
+      earned_at: new Date()
+    });
     return this.save();
   }
   return Promise.resolve(this);
+};
+
+// Instance method to remove badge
+userSchema.methods.removeBadge = function(badgeName) {
+  this.badges = this.badges.filter(badge => badge.name !== badgeName);
+  return this.save();
+};
+
+// Instance method to get badges by category
+userSchema.methods.getBadgesByCategory = function(category) {
+  return this.badges.filter(badge => badge.category === category);
 };
 
 // Instance method to check if account is locked
