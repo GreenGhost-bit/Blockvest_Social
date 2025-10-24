@@ -9,7 +9,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryCount: number = 0
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -42,6 +43,13 @@ class ApiClient {
           throw new Error('Access denied. Insufficient permissions.');
         }
         
+        if (response.status >= 500 && retryCount < 3) {
+          // Retry on server errors
+          console.warn(`Server error, retrying... (attempt ${retryCount + 1}/3)`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+          return this.request<T>(endpoint, options, retryCount + 1);
+        }
+        
         if (response.status >= 500) {
           throw new Error('Server error. Please try again later.');
         }
@@ -51,6 +59,13 @@ class ApiClient {
 
       return await response.json();
     } catch (error) {
+      if (retryCount < 3 && error instanceof TypeError) {
+        // Network error, retry
+        console.warn(`Network error, retrying... (attempt ${retryCount + 1}/3)`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return this.request<T>(endpoint, options, retryCount + 1);
+      }
+      
       console.error('API request failed:', error);
       throw error;
     }
