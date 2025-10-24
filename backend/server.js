@@ -312,6 +312,16 @@ io.on('connection', (socket) => {
   socket.on('ping', () => {
     socket.emit('pong');
   });
+
+  // Handle custom events with validation
+  socket.on('custom_event', (data) => {
+    if (!data || typeof data !== 'object') {
+      socket.emit('error', { message: 'Invalid event data format' });
+      return;
+    }
+    // Process custom event
+    console.log('Custom event received:', data);
+  });
 });
 
 // Enhanced health check endpoint with detailed system information
