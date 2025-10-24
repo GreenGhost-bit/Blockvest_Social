@@ -561,7 +561,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   }, [fetchBalance, fetchAssets, fetchTransactions]);
 
-  // Add mock wallet for development
+  // Add mock wallet for development with better simulation
   const connectMockWallet = useCallback(async () => {
     try {
       setLoading(true);
@@ -575,7 +575,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setIsConnected(true);
       setConnectionStatus('connected');
       
-      // Create mock user data
+      // Create mock user data with more realistic values
       const mockUser = {
         id: 'mock-user-id',
         walletAddress: mockAddress,
@@ -585,12 +585,17 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           location: 'Test Location',
           phone: '+1234567890'
         },
-        reputationScore: 75,
-        isVerified: true
+        reputationScore: Math.floor(Math.random() * 40) + 60, // Random score between 60-100
+        isVerified: true,
+        preferences: {
+          notifications: { email: true, push: true, sms: false },
+          privacy: { profile_public: true, investment_history_public: false, risk_score_public: false },
+          investment: { min_amount: 0.001, max_amount: 1000, preferred_risk_level: 'medium' }
+        }
       };
       
       setUser(mockUser);
-      setBalance(1000); // Mock balance
+      setBalance(Math.random() * 1000 + 100); // Random balance between 100-1100
       setAssets([]);
       setTransactions([]);
       
