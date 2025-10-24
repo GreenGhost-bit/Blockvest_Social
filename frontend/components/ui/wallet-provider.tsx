@@ -317,10 +317,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       
       if (confirmation['confirmed-round']) {
         setPendingTransactions(prev => prev.filter(tx => tx.id !== response.txId));
-        setTransactions(prev => [newTransaction, ...prev]);
+        setTransactions(prev => [{
+          ...newTransaction,
+          status: 'confirmed',
+          timestamp: confirmation['confirmed-round'] * 1000 // Convert round to timestamp
+        }, ...prev]);
         await fetchBalance(walletAddress!);
         return response.txId;
       } else {
+        // Mark transaction as failed
+        setPendingTransactions(prev => prev.filter(tx => tx.id !== response.txId));
+        setTransactions(prev => [{
+          ...newTransaction,
+          status: 'failed'
+        }, ...prev]);
         throw new Error('Transaction failed to confirm');
       }
     } catch (err) {
