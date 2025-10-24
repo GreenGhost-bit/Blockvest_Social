@@ -161,19 +161,26 @@ const authenticateToken = (req, res, next) => {
   if (!token) {
     return res.status(401).json({ 
       error: 'Access token required',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      code: 'NO_TOKEN'
     });
   }
 
   jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
     if (err) {
-      console.warn('JWT verification failed:', err.message);
+      console.warn('JWT verification failed:', err.message, 'IP:', req.ip);
       return res.status(403).json({ 
         error: 'Invalid or expired token',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        code: 'INVALID_TOKEN'
       });
     }
+    
+    // Add session info to request
     req.user = user;
+    req.sessionStart = Date.now();
+    req.userAgent = req.headers['user-agent'] || 'unknown';
+    
     next();
   });
 };
