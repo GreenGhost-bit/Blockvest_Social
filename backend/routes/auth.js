@@ -98,10 +98,37 @@ router.post('/register', async (req, res) => {
   try {
     const { walletAddress, profile } = req.body;
     
+    if (!walletAddress) {
+      return res.status(400).json({ 
+        error: 'Wallet address is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     let user = await User.findOne({ walletAddress });
     
     if (!user) {
-      return res.status(404).json({ error: 'Wallet not connected' });
+      return res.status(404).json({ 
+        error: 'Wallet not connected. Please connect your wallet first.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Validate profile data
+    if (profile) {
+      if (profile.name && profile.name.length > 100) {
+        return res.status(400).json({
+          error: 'Name cannot exceed 100 characters',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
+        return res.status(400).json({
+          error: 'Please provide a valid email address',
+          timestamp: new Date().toISOString()
+        });
+      }
     }
 
     user.profile = { ...user.profile, ...profile };
@@ -115,11 +142,15 @@ router.post('/register', async (req, res) => {
         profile: user.profile,
         reputationScore: user.reputationScore,
         isVerified: user.isVerified
-      }
+      },
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ 
+      error: 'Registration failed',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
