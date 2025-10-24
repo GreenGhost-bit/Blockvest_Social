@@ -30,10 +30,12 @@ const ExplorePage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [showRiskDetails, setShowRiskDetails] = useState(false);
+  const [sortBy, setSortBy] = useState<'amount' | 'interestRate' | 'duration' | 'reputation'>('amount');
+  const [filterBy, setFilterBy] = useState<'all' | 'low' | 'medium' | 'high'>('all');
 
   useEffect(() => {
     fetchInvestments();
-  }, [page]);
+  }, [page, sortBy, filterBy]);
 
   const fetchInvestments = async () => {
     try {
