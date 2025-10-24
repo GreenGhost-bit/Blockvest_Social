@@ -185,4 +185,19 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Session management middleware
+const trackSession = (req, res, next) => {
+  if (req.user) {
+    // Log user activity
+    req.user.logActivity('api_access', {
+      endpoint: req.path,
+      method: req.method,
+      ip: req.ip
+    }, req.ip, req.headers['user-agent']).catch(err => {
+      console.warn('Failed to log activity:', err);
+    });
+  }
+  next();
+};
+
 module.exports = { router, authenticateToken };
