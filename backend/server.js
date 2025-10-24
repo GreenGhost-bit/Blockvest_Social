@@ -328,13 +328,17 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Enhanced server startup with better error handling
+// Enhanced server startup with better error handling and logging
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('🚀 Blockvest Social API Server Started');
+  console.log('='.repeat(50));
+  console.log(`🌐 Server running on port ${PORT}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 WebSocket server ready for real-time notifications`);
   console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
   console.log(`📊 Health check available at: http://localhost:${PORT}/health`);
+  console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
+  console.log('='.repeat(50));
 });
 
 // Enhanced graceful shutdown
