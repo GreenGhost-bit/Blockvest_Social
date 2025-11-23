@@ -428,10 +428,11 @@ const notificationValidation = {
 // Query parameter validation schemas
 const queryValidation = {
   pagination: Joi.object({
-    page: Joi.number().integer().min(1).default(1).messages({
+    page: Joi.number().integer().min(1).max(10000).default(1).messages({
       'number.base': 'Page must be a valid number',
       'number.integer': 'Page must be a whole number',
-      'number.min': 'Page must be at least 1'
+      'number.min': 'Page must be at least 1',
+      'number.max': 'Page cannot exceed 10000'
     }),
     limit: Joi.number().integer().min(1).max(100).default(20).messages({
       'number.base': 'Limit must be a valid number',
