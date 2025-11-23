@@ -154,8 +154,13 @@ router.post('/fund', authenticateToken, async (req, res) => {
     investment.investor = investor._id;
     investment.status = 'active';
     investment.fundedAt = new Date();
-    investment.dueDate = new Date(Date.now() + investment.duration * 24 * 60 * 60 * 1000);
-    investment.repaymentAmount = investment.amount + (investment.amount * investment.interestRate / 100);
+    
+    const durationMs = (investment.duration || 0) * 24 * 60 * 60 * 1000;
+    investment.dueDate = new Date(Date.now() + durationMs);
+    
+    const principal = investment.amount || 0;
+    const interestRate = investment.interestRate || 0;
+    investment.repaymentAmount = principal + (principal * interestRate / 100);
     investment.remainingBalance = investment.repaymentAmount;
     
     await investment.save();
