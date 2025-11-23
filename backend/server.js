@@ -354,6 +354,7 @@ io.on('connection', (socket) => {
 // Enhanced health check endpoint with detailed system information
 app.get('/health', async (req, res) => {
   try {
+    const memUsage = process.memoryUsage();
     const health = {
       status: 'OK',
       timestamp: new Date().toISOString(),
@@ -363,9 +364,10 @@ app.get('/health', async (req, res) => {
       database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
       websocket: io ? 'active' : 'inactive',
       memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
-        external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+        used: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+        total: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+        external: Math.round(memUsage.external / 1024 / 1024) + ' MB',
+        rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB'
       },
       cpu: process.cpuUsage(),
       platform: process.platform,
