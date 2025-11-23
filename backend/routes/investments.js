@@ -324,12 +324,19 @@ router.get('/stats', authenticateToken, async (req, res) => {
 
 router.get('/explore', async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = 'pending' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const status = req.query.status || 'pending';
+    
+    const validStatuses = ['pending', 'active', 'completed', 'defaulted', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status filter' });
+    }
     
     const investments = await Investment.find({ status })
       .populate('borrower', 'profile reputationScore')
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
+      .limit(limit)
       .skip((page - 1) * limit);
 
     const total = await Investment.countDocuments({ status });
