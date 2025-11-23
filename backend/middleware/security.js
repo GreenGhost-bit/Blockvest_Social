@@ -221,10 +221,11 @@ const limitRequestSize = (req, res, next) => {
 
 // IP address validation middleware
 const validateIP = (req, res, next) => {
-  const ip = req.ip || req.connection.remoteAddress;
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (req.ip || req.connection.remoteAddress);
   
   // Check if IP is valid
-  if (!ip || ip === 'unknown') {
+  if (!ip || ip === 'unknown' || typeof ip !== 'string') {
     logger.security('Invalid IP address detected', {
       ip,
       userAgent: req.get('User-Agent'),
