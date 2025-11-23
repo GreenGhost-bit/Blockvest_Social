@@ -212,7 +212,12 @@ app.use((req, res, next) => {
 // Enhanced MongoDB connection with better error handling and retry logic
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/blockvest', {
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/blockvest';
+    if (!mongoUri || mongoUri.trim() === '') {
+      throw new Error('MongoDB URI is not configured');
+    }
+    
+    await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       maxPoolSize: 10,
