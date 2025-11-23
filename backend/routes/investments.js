@@ -398,6 +398,10 @@ router.get('/my-investments', authenticateToken, async (req, res) => {
 
 // Helper function to generate repayment schedule
 function generateRepaymentSchedule(amount, interestRate, duration) {
+  if (!amount || !interestRate || !duration || duration <= 0) {
+    throw new Error('Invalid parameters for repayment schedule');
+  }
+  
   const totalInterest = (amount * interestRate / 100);
   const totalRepayment = amount + totalInterest;
   const dailyRepayment = totalRepayment / duration;
@@ -406,7 +410,7 @@ function generateRepaymentSchedule(amount, interestRate, duration) {
   for (let i = 1; i <= duration; i++) {
     schedule.push({
       day: i,
-      amount: dailyRepayment,
+      amount: Math.round(dailyRepayment * 100) / 100,
       dueDate: new Date(Date.now() + i * 24 * 60 * 60 * 1000)
     });
   }
