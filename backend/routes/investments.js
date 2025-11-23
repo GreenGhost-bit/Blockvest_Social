@@ -351,15 +351,15 @@ router.get('/explore', async (req, res) => {
         duration: inv.duration,
         status: inv.status,
         createdAt: inv.createdAt,
-        borrower: {
-          name: inv.borrower.profile.name,
-          location: inv.borrower.profile.location,
-          reputationScore: inv.borrower.reputationScore
-        }
+        borrower: inv.borrower ? {
+          name: inv.borrower.profile?.name || 'Unknown',
+          location: inv.borrower.profile?.location || '',
+          reputationScore: inv.borrower.reputationScore || 0
+        } : null
       })),
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: page,
+        limit: limit,
         total,
         pages: Math.ceil(total / limit)
       }
