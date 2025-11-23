@@ -492,8 +492,11 @@ class BlockchainService {
 
   // Enhanced Algos conversion with validation
   algosToMicroAlgos(algos) {
-    if (typeof algos !== 'number' || algos < 0) {
+    if (typeof algos !== 'number' || isNaN(algos) || algos < 0) {
       throw new Error('Invalid Algos amount');
+    }
+    if (algos > 1000000) {
+      throw new Error('Amount exceeds maximum limit');
     }
     return Math.floor(algos * 1000000);
   }
