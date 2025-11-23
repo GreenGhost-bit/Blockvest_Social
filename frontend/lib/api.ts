@@ -91,11 +91,20 @@ class ApiClient {
 
   private cleanExpiredCache(): void {
     const now = Date.now();
+    const keysToDelete: string[] = [];
+    
     for (const [key, entry] of this.cache.entries()) {
+      if (!entry || typeof entry.timestamp !== 'number' || typeof entry.ttl !== 'number') {
+        keysToDelete.push(key);
+        continue;
+      }
+      
       if (now - entry.timestamp > entry.ttl) {
-        this.cache.delete(key);
+        keysToDelete.push(key);
       }
     }
+    
+    keysToDelete.forEach(key => this.cache.delete(key));
   }
 
   private getCacheKey(endpoint: string, options: RequestInit): string {
