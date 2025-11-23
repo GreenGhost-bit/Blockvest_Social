@@ -59,7 +59,8 @@ class ApiClient {
 
     // Add timeout to requests
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeout = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10);
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     config.signal = controller.signal;
 
