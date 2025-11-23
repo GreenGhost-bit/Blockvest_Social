@@ -201,6 +201,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, refreshInterval = 30000 }
   }, [recentActivity, activityFilter, searchQuery]);
 
   const getReputationColor = (level: string) => {
+    if (!level || typeof level !== 'string') {
+      return 'text-gray-600';
+    }
     const colors = {
       bronze: 'text-amber-600',
       silver: 'text-gray-500',
@@ -210,7 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, refreshInterval = 30000 }
       master: 'text-red-500',
       legend: 'text-green-500'
     };
-    return colors[level as keyof typeof colors] || 'text-gray-600';
+    return colors[level.toLowerCase() as keyof typeof colors] || 'text-gray-600';
   };
 
   const getStatusColor = (status: string) => {
