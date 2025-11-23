@@ -402,6 +402,9 @@ class RiskAssessmentEngine {
   }
 
   determineRiskLevel(score) {
+    if (typeof score !== 'number' || isNaN(score)) {
+      return 'unknown';
+    }
     if (score >= 80) return 'very_low';
     if (score >= 65) return 'low';
     if (score >= 45) return 'medium';
