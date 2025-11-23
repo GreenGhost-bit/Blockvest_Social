@@ -29,6 +29,10 @@ const commonSchemas = {
     'string.pattern.base': 'Invalid Algorand wallet address format'
   }),
   
+  transactionId: Joi.string().pattern(/^[A-Z2-7]{52}$/).messages({
+    'string.pattern.base': 'Invalid Algorand transaction ID format'
+  }),
+  
   amount: Joi.number().positive().max(1000000).precision(6).messages({
     'number.base': 'Amount must be a valid number',
     'number.positive': 'Amount must be positive',
