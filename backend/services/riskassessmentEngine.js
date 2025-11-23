@@ -486,11 +486,16 @@ class RiskAssessmentEngine {
   }
 
   assessTimeOnPlatform(timeMs) {
+    if (!timeMs || typeof timeMs !== 'number' || isNaN(timeMs) || timeMs < 0) {
+      return 0;
+    }
+    
     const days = timeMs / (1000 * 60 * 60 * 24);
     if (days >= 365) return 100;
     if (days >= 180) return 85;
     if (days >= 90) return 70;
     if (days >= 30) return 55;
+    if (days >= 7) return 40;
     return 30;
   }
 
