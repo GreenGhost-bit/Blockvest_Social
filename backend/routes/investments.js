@@ -273,7 +273,10 @@ router.post('/emergency-withdrawal', authenticateToken, async (req, res) => {
 // Get investment statistics
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID not found in token' });
+    }
     
     const stats = await Investment.aggregate([
       {
