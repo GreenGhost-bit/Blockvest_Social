@@ -104,13 +104,20 @@ router.post('/fund', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Investment ID and transaction ID are required' });
     }
     
+    if (!investmentId || typeof investmentId !== 'string') {
+      return res.status(400).json({ error: 'Invalid investment ID' });
+    }
+    
     const investment = await Investment.findById(investmentId).populate('borrower');
     if (!investment) {
       return res.status(404).json({ error: 'Investment not found' });
     }
 
     if (investment.status !== 'pending') {
-      return res.status(400).json({ error: 'Investment is not available for funding' });
+      return res.status(400).json({ 
+        error: 'Investment is not available for funding',
+        currentStatus: investment.status
+      });
     }
 
     const investor = await User.findById(req.user.userId);
