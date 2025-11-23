@@ -18,7 +18,7 @@ router.post('/connect-wallet', async (req, res) => {
     }
 
     // Validate wallet address format
-    if (!/^[A-Z2-7]{58}$/.test(walletAddress)) {
+    if (!walletAddress || typeof walletAddress !== 'string' || !/^[A-Z2-7]{58}$/.test(walletAddress)) {
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
 
