@@ -473,10 +473,14 @@ class BlockchainService {
   // Enhanced address validation
   isValidAddress(address) {
     try {
-      if (!address || typeof address !== 'string') {
+      if (!address || typeof address !== 'string' || address.trim() === '') {
         return false;
       }
-      return algosdk.isValidAddress(address);
+      const trimmedAddress = address.trim();
+      if (trimmedAddress.length !== 58) {
+        return false;
+      }
+      return algosdk.isValidAddress(trimmedAddress);
     } catch (error) {
       return false;
     }
