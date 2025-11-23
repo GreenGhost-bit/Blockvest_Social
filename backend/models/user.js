@@ -599,6 +599,14 @@ userSchema.index({ last_active: -1 });
 
 // Instance method to follow another user
 userSchema.methods.followUser = function(userIdToFollow) {
+  if (!userIdToFollow) {
+    throw new Error('User ID to follow is required');
+  }
+  
+  if (userIdToFollow.toString() === this._id.toString()) {
+    throw new Error('Cannot follow yourself');
+  }
+  
   if (!this.following.includes(userIdToFollow)) {
     this.following.push(userIdToFollow);
     return this.save();
