@@ -23,8 +23,12 @@ router.post('/connect-wallet', async (req, res) => {
     }
 
     // Validate signature format
-    if (!/^[A-Za-z0-9+/=]+$/.test(signature)) {
+    if (!signature || typeof signature !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(signature)) {
       return res.status(400).json({ error: 'Invalid signature format' });
+    }
+    
+    if (signature.length < 10 || signature.length > 200) {
+      return res.status(400).json({ error: 'Signature length is invalid' });
     }
 
     const isValid = algosdk.verifyBytes(
