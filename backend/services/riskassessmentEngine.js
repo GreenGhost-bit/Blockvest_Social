@@ -555,17 +555,33 @@ class RiskAssessmentEngine {
   }
 
   calculateSimilarityScore(investment1, investment2) {
+    if (!investment1 || !investment2) {
+      return 0;
+    }
+    
     let similarity = 0;
     
-    if (investment1.purpose === investment2.purpose) similarity += 40;
+    if (investment1.purpose && investment2.purpose && investment1.purpose === investment2.purpose) {
+      similarity += 40;
+    }
     
-    const amountDiff = Math.abs(investment1.amount - investment2.amount) / Math.max(investment1.amount, investment2.amount);
-    similarity += (1 - amountDiff) * 30;
+    if (investment1.amount && investment2.amount && typeof investment1.amount === 'number' && typeof investment2.amount === 'number') {
+      const maxAmount = Math.max(investment1.amount, investment2.amount);
+      if (maxAmount > 0) {
+        const amountDiff = Math.abs(investment1.amount - investment2.amount) / maxAmount;
+        similarity += (1 - amountDiff) * 30;
+      }
+    }
     
-    const durationDiff = Math.abs(investment1.duration - investment2.duration) / Math.max(investment1.duration, investment2.duration);
-    similarity += (1 - durationDiff) * 30;
+    if (investment1.duration && investment2.duration && typeof investment1.duration === 'number' && typeof investment2.duration === 'number') {
+      const maxDuration = Math.max(investment1.duration, investment2.duration);
+      if (maxDuration > 0) {
+        const durationDiff = Math.abs(investment1.duration - investment2.duration) / maxDuration;
+        similarity += (1 - durationDiff) * 30;
+      }
+    }
     
-    return Math.round(similarity);
+    return Math.max(0, Math.min(100, Math.round(similarity)));
   }
 
   calculateConfidence(data) {
