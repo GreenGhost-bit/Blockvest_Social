@@ -141,7 +141,7 @@ const securityConfig = {
 const sanitizeInput = (req, res, next) => {
   try {
     // Sanitize body
-    if (req.body) {
+    if (req.body && typeof req.body === 'object') {
       Object.keys(req.body).forEach(key => {
         if (typeof req.body[key] === 'string') {
           // Remove null bytes and other dangerous characters
@@ -149,6 +149,11 @@ const sanitizeInput = (req, res, next) => {
             .replace(/\0/g, '')
             .replace(/[\x00-\x1f\x7f-\x9f]/g, '')
             .trim();
+          
+          // Limit string length to prevent DoS
+          if (req.body[key].length > 10000) {
+            req.body[key] = req.body[key].substring(0, 10000);
+          }
         }
       });
     }
