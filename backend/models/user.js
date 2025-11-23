@@ -497,14 +497,18 @@ userSchema.methods.checkPassword = async function(candidatePassword) {
 
 // Instance method to update reputation with validation
 userSchema.methods.updateReputation = function(scoreChange, reason) {
-  if (typeof scoreChange !== 'number' || !reason) {
+  if (typeof scoreChange !== 'number' || isNaN(scoreChange) || !reason || typeof reason !== 'string') {
     throw new Error('Invalid reputation update parameters');
+  }
+  
+  if (reason.length > 200) {
+    throw new Error('Reason cannot exceed 200 characters');
   }
   
   this.reputationScore = Math.max(0, Math.min(100, this.reputationScore + scoreChange));
   this.reputation_history.push({
     score_change: scoreChange,
-    reason: reason,
+    reason: reason.substring(0, 200),
     timestamp: new Date()
   });
   
