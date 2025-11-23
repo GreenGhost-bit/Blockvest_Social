@@ -255,6 +255,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, refreshInterval = 30000 }
   };
 
   const formatCurrency = (amount: number) => {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return '$0.00';
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
