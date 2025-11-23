@@ -408,7 +408,8 @@ const userSchema = new mongoose.Schema({
   failed_login_attempts: {
     type: Number,
     default: 0,
-    min: [0, 'Failed login attempts cannot be negative']
+    min: [0, 'Failed login attempts cannot be negative'],
+    max: [10, 'Failed login attempts cannot exceed 10']
   },
   account_locked_until: {
     type: Date,
