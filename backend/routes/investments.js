@@ -13,7 +13,7 @@ router.post('/create', authenticateToken, validateRiskThreshold, autoAssessInves
     const { amount, purpose, description, interestRate, duration } = req.body;
     
     // Enhanced validation
-    if (!amount || amount < 0.001 || amount > 1000) {
+    if (!amount || typeof amount !== 'number' || amount < 0.001 || amount > 1000) {
       return res.status(400).json({ error: 'Invalid amount. Must be between 0.001 and 1000 ALGO' });
     }
     
