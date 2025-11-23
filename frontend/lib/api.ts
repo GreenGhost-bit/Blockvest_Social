@@ -23,6 +23,10 @@ class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     
+    if (!url || url.trim() === '') {
+      throw new Error('Invalid endpoint URL');
+    }
+    
     // Check cache for GET requests
     const cacheKey = this.getCacheKey(endpoint, options);
     if ((options.method === 'GET' || !options.method) && retryCount === 0) {
