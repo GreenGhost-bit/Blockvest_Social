@@ -664,14 +664,25 @@ userSchema.methods.getTopConnections = function(limit = 5) {
 
 // Instance method to calculate social score with enhanced algorithm
 userSchema.methods.calculateSocialScore = function() {
-  const followerBonus = Math.min(this.followers.length * 2, 20); // Cap at 20 points
-  const connectionBonus = Math.min(this.connections.reduce((sum, conn) => sum + conn.strength, 0), 30); // Cap at 30 points
-  const activityBonus = Math.min(this.login_count * 0.1, 10); // Cap at 10 points
-  const verificationBonus = this.isVerified ? 15 : 0; // Bonus for verification
-  const badgeBonus = Math.min(this.badges.length * 2, 10); // Cap at 10 points
+  const followerCount = Array.isArray(this.followers) ? this.followers.length : 0;
+  const followerBonus = Math.min(followerCount * 2, 20); // Cap at 20 points
+  
+  const connectionBonus = Array.isArray(this.connections) 
+    ? Math.min(this.connections.reduce((sum, conn) => sum + (conn?.strength || 0), 0), 30)
+    : 0; // Cap at 30 points
+    
+  const loginCount = typeof this.login_count === 'number' ? this.login_count : 0;
+  const activityBonus = Math.min(loginCount * 0.1, 10); // Cap at 10 points
+  
+  const verificationBonus = this.isVerified === true ? 15 : 0; // Bonus for verification
+  
+  const badgeCount = Array.isArray(this.badges) ? this.badges.length : 0;
+  const badgeBonus = Math.min(badgeCount * 2, 10); // Cap at 10 points
+  
+  const baseReputation = typeof this.reputationScore === 'number' ? this.reputationScore : 0;
   
   const socialScore = Math.min(100, 
-    this.reputationScore + 
+    baseReputation + 
     followerBonus + 
     connectionBonus + 
     activityBonus + 
@@ -679,7 +690,7 @@ userSchema.methods.calculateSocialScore = function() {
     badgeBonus
   );
   
-  return Math.round(socialScore);
+  return Math.max(0, Math.min(100, Math.round(socialScore)));
 };
 
 // Instance method to update preferences
