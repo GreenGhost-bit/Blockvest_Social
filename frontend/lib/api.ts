@@ -140,13 +140,14 @@ class ApiClient {
         const errorData = await response.json().catch(() => ({}));
         
         // Handle specific error cases
-        if (response.status === 401) {
-          // Clear invalid token
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-          }
-          throw new Error('Authentication required. Please reconnect your wallet.');
+      if (response.status === 401) {
+        // Clear invalid token and user data
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
+        throw new Error('Authentication required. Please reconnect your wallet.');
+      }
         
         if (response.status === 403) {
           throw new Error('Access denied. Insufficient permissions.');
