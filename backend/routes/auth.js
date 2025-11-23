@@ -135,7 +135,19 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    user.profile = { ...user.profile, ...profile };
+    if (profile) {
+      const allowedFields = ['name', 'email', 'location', 'phone'];
+      const filteredProfile = {};
+      
+      allowedFields.forEach(field => {
+        if (profile[field] !== undefined) {
+          filteredProfile[field] = profile[field];
+        }
+      });
+      
+      user.profile = { ...user.profile, ...filteredProfile };
+    }
+    
     await user.save();
 
     res.json({
