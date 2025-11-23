@@ -507,12 +507,18 @@ class BlockchainService {
 
   // New: Submit transaction with retry logic
   async submitTransactionWithRetry(signedTxn, maxRetries = this.maxRetries) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    if (!signedTxn || !Buffer.isBuffer(signedTxn) && !(signedTxn instanceof Uint8Array)) {
+      throw new Error('Invalid transaction format');
+    }
+    
+    const validMaxRetries = Math.max(1, Math.min(10, parseInt(maxRetries) || this.maxRetries));
+    
+    for (let attempt = 1; attempt <= validMaxRetries; attempt++) {
       try {
         const txId = await this.algodClient.sendRawTransaction(signedTxn).do();
         return txId;
       } catch (error) {
-        if (attempt === maxRetries) {
+        if (attempt === validMaxRetries) {
           throw error;
         }
         logger.warn(`Transaction submission attempt ${attempt} failed, retrying...`, { error: error.message });
