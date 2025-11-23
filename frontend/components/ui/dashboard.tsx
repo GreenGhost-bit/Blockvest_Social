@@ -266,6 +266,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, refreshInterval = 30000 }
   };
 
   const formatPercentage = (value: number) => {
+    if (typeof value !== 'number' || isNaN(value)) {
+      return '0.0%';
+    }
     return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
