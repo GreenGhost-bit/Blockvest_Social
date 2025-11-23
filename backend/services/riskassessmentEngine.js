@@ -609,10 +609,20 @@ class RiskAssessmentEngine {
   }
 
   async calculatePlatformDefaultRate() {
-    const totalCompleted = await Investment.countDocuments({ status: { $in: ['completed', 'defaulted'] } });
-    const totalDefaulted = await Investment.countDocuments({ status: 'defaulted' });
-    
-    return totalCompleted > 0 ? (totalDefaulted / totalCompleted) * 100 : 0;
+    try {
+      const totalCompleted = await Investment.countDocuments({ status: { $in: ['completed', 'defaulted'] } });
+      const totalDefaulted = await Investment.countDocuments({ status: 'defaulted' });
+      
+      if (totalCompleted === 0) {
+        return 0;
+      }
+      
+      const rate = (totalDefaulted / totalCompleted) * 100;
+      return Math.round(rate * 100) / 100; // Round to 2 decimal places
+    } catch (error) {
+      console.error('Error calculating platform default rate:', error);
+      return 0;
+    }
   }
 
   // New: Enable real-time monitoring
