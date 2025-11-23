@@ -186,8 +186,15 @@ const sanitizeInput = (req, res, next) => {
 
 // Request size limiting middleware
 const limitRequestSize = (req, res, next) => {
-  const contentLength = parseInt(req.get('Content-Length') || '0');
-  const maxSize = parseInt(process.env.MAX_REQUEST_SIZE) || 10 * 1024 * 1024; // 10MB
+  const contentLength = parseInt(req.get('Content-Length') || '0', 10);
+  const maxSize = parseInt(process.env.MAX_REQUEST_SIZE || '10485760', 10); // 10MB default
+
+  if (isNaN(contentLength) || contentLength < 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid Content-Length header'
+    });
+  }
 
   if (contentLength > maxSize) {
     logger.security('Request size limit exceeded', {
