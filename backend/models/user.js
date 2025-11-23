@@ -522,11 +522,18 @@ userSchema.methods.updateReputation = function(scoreChange, reason) {
 
 // Instance method to add badge with duplicate prevention
 userSchema.methods.addBadge = function(name, description) {
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    throw new Error('Badge name is required');
+  }
+  if (!description || typeof description !== 'string' || description.trim() === '') {
+    throw new Error('Badge description is required');
+  }
+  
   const existingBadge = this.badges.find(badge => badge.name === name);
   if (!existingBadge) {
     this.badges.push({ 
-      name, 
-      description,
+      name: name.trim().substring(0, 50), 
+      description: description.trim().substring(0, 200),
       earned_at: new Date()
     });
     return this.save();
