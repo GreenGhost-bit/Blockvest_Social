@@ -484,10 +484,10 @@ class BlockchainService {
 
   // Enhanced microAlgos conversion with validation
   microAlgosToAlgos(microAlgos) {
-    if (typeof microAlgos !== 'number' || microAlgos < 0) {
+    if (typeof microAlgos !== 'number' || isNaN(microAlgos) || microAlgos < 0) {
       throw new Error('Invalid microAlgos amount');
     }
-    return microAlgos / 1000000;
+    return Math.round((microAlgos / 1000000) * 1000000) / 1000000;
   }
 
   // Enhanced Algos conversion with validation
