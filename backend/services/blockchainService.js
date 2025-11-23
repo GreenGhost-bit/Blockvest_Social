@@ -559,7 +559,8 @@ class BlockchainService {
   // New: Get suggested transaction parameters with fallback
   async getSuggestedParams() {
     try {
-      return await this.algodClient.getTransactionParams().do();
+      const params = await this.algodClient.getTransactionParams().do();
+      return params;
     } catch (error) {
       logger.warn('Failed to get suggested params, using fallback', { error: error.message });
       // Fallback parameters for testnet
@@ -570,6 +571,20 @@ class BlockchainService {
         genesisID: 'testnet-v1.0',
         genesisHash: 'SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI='
       };
+    }
+  }
+
+  // New: Validate transaction before submission
+  async validateTransaction(signedTxn) {
+    try {
+      const decoded = algosdk.decodeSignedTransaction(signedTxn);
+      if (!decoded.txn) {
+        throw new Error('Invalid transaction format');
+      }
+      return { valid: true, transaction: decoded.txn };
+    } catch (error) {
+      logger.error('Transaction validation failed', { error: error.message });
+      return { valid: false, error: error.message };
     }
   }
 }
